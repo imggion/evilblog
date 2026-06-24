@@ -1,0 +1,11 @@
+<form class="admin-form" method="post" action="/admin/post">
+<div><label>id <span>(leave blank to create)</span><input name="id"></label></div>
+<div><label>title<input name="title" required></label></div>
+<div><label>slug <span>(optional)</span><input name="slug"></label></div>
+<div><label>excerpt <span>(optional meta description)</span><textarea name="excerpt" rows="4"></textarea></label></div>
+<div><label>og image <span>(optional absolute or site-relative URL)</span><input name="og_image"></label></div>
+<div><label>status<select name="status"><option value="published">published</option><option value="draft">draft</option></select></label></div>
+<div><label>tags <span>(comma-separated)</span><input name="tags"></label></div>
+<div><label>body<textarea name="body" rows="20"></textarea></label></div>
+<div><button type="submit">submit</button></div>
+</form>

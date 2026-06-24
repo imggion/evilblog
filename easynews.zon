@@ -1,0 +1,14 @@
+.{
+    // Display name used in the header, titles, RSS, and social metadata.
+    .site_title = "easynews",
+
+    // Public base URL used for canonical URLs, RSS links, and social metadata.
+    .site_base_url = "http://127.0.0.1:8080",
+
+    // Default metadata for the homepage and social previews.
+    .site_description = "Latest posts from easynews.",
+    .site_default_og_image = "http://127.0.0.1:8080/static/og-default.png",
+
+    // Small text rendered at the bottom of every HTML page.
+    .footer_text = "easynews: small Redis-backed Zig blog",
+}
