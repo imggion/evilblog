@@ -1,0 +1,402 @@
+.posts {
+    margin: 0;
+    padding-left: 28px;
+}
+
+.posts li {
+    padding: 3px 0;
+}
+
+.post-row {
+    padding: var(--row-pad);
+    border: 1px solid var(--article-border);
+    background: var(--article-bg);
+}
+
+.titleline {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10pt;
+}
+
+.post-heading {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 10px 0 4px;
+}
+
+.post-heading h1 {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.upvote-form {
+    display: inline-flex;
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.upvote-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+}
+
+.upvote-icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.post-author-actions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.post-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+}
+
+.post-action-button:hover {
+    background: var(--input-bg);
+}
+
+.post-action-icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+}
+
+.post-delete-dialog {
+    width: min(340px, calc(100vw - 32px));
+    min-height: 156px;
+    padding: 0;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+}
+
+.post-delete-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+.post-delete-dialog::backdrop {
+    background: rgba(0, 0, 0, .28);
+}
+
+.post-delete-header {
+    padding: 2px 6px;
+    background: var(--top);
+    color: #000;
+    font: 10pt Verdana, Arial, sans-serif;
+    font-weight: bold;
+    line-height: 12px;
+}
+
+.post-delete-body {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 26px 20px 22px;
+}
+
+.post-delete-form {
+    margin: 0;
+}
+
+.post-delete-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.post-delete-actions button {
+    min-width: 64px;
+    min-height: 32px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+    font: 10pt Verdana, Arial, sans-serif;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.post-delete-actions button[type="submit"] {
+    border-color: #8f3434;
+    background: #b85050;
+    color: #fff;
+}
+
+.post-delete-actions button:active {
+    transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .post-delete-actions button[type="submit"]:hover {
+        background: #a94343;
+    }
+}
+
+.sitebit,
+.subtext,
+.subtext a {
+    color: var(--muted);
+    font-size: 7pt;
+}
+
+.post-full h1 {
+    margin: 0;
+    font-size: 13pt;
+    text-wrap: balance;
+}
+
+.body {
+    max-width: 760px;
+    margin-top: 14px;
+    font-size: 10pt;
+    line-height: 1.45;
+}
+
+.body p {
+    margin: 0 0 10px;
+}
+
+.body p:last-child,
+.body ul:last-child,
+.body ol:last-child,
+.code-block:last-child {
+    margin-bottom: 0;
+}
+
+.body ul,
+.body ol {
+    margin: 0 0 10px 22px;
+    padding: 0;
+}
+
+.body li {
+    margin: 2px 0;
+}
+
+.body h1,
+.body h2,
+.body h3 {
+    margin: 14px 0 6px;
+    line-height: 1.3;
+    font-weight: bold;
+}
+
+.body h1 {
+    font-size: 12pt;
+}
+
+.body h2 {
+    font-size: 11pt;
+}
+
+.body h3 {
+    font-size: 10pt;
+}
+
+.body a {
+    color: var(--top);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.body img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 10px 0;
+    border: 1px solid var(--article-border);
+}
+
+.body code {
+    padding: 1px 3px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 9pt;
+}
+
+.code-block {
+    overflow-x: auto;
+    margin: 0 0 10px;
+    padding: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 9pt;
+    line-height: 1.4;
+}
+
+.code-block code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+}
+
+.post-comments-divider {
+    max-width: 760px;
+    margin: 24px 0 0;
+    border: 0;
+    border-top: 1px solid var(--footer-border);
+}
+
+.comments {
+    max-width: 760px;
+    margin: 14px 0 0;
+}
+
+.comments h2 {
+    margin: 0 0 8px;
+    font-size: 10pt;
+}
+
+.comment-form {
+    max-width: 560px;
+    margin: 8px 0 14px;
+}
+
+.comment-compose {
+    margin: 8px 0 14px;
+}
+
+.comment-compose summary {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid var(--button-border);
+    background: var(--button-bg);
+    color: var(--input-text);
+    font: 10pt Verdana, Arial, sans-serif;
+    cursor: pointer;
+    list-style: none;
+}
+
+.comment-compose summary::marker {
+    content: "";
+}
+
+.comment-compose summary::-webkit-details-marker {
+    display: none;
+}
+
+.comment-compose[open] > summary {
+    display: none;
+}
+
+.comment-form div {
+    margin: 6px 0;
+}
+
+.comment-form label {
+    display: block;
+    color: var(--muted);
+    font-size: 8pt;
+}
+
+.comment-list,
+.comment-children {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.comment-list {
+    margin-top: 14px;
+}
+
+.comment {
+    margin: 10px 0;
+}
+
+.comment-meta,
+.comment-meta a {
+    color: var(--muted);
+    font-size: 7pt;
+}
+
+.comment-delete-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    margin-left: 4px;
+    padding: 0;
+    border: 1px solid var(--input-border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 9pt;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.comment-body {
+    margin-top: 3px;
+    font-size: 10pt;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.comment-reply {
+    margin-top: 4px;
+}
+
+.comment-reply summary {
+    display: inline-block;
+    color: var(--muted);
+    font-size: 8pt;
+    cursor: pointer;
+}
+
+.comment-reply-form {
+    max-width: 500px;
+}
+
+.comment-children {
+    margin: 8px 0 0 18px;
+    padding-left: 12px;
+    border-left: 1px solid var(--footer-border);
+}
+
+.pager {
+    margin: 14px 0;
+    font-size: 8pt;
+}
+
+@media (max-width: 700px) {
+    .posts {
+        padding-left: 24px;
+    }
+
+    .comment-children {
+        margin-left: 12px;
+        padding-left: 10px;
+    }
+}

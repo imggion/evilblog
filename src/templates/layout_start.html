@@ -6,25 +6,36 @@
 <title>{{title}}</title>
 <meta name="description" content="{{description}}">
 <link rel="canonical" href="{{canonical_url}}">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="shortcut icon" href="/favicon.ico">
 <meta property="og:type" content="{{og_type}}">
 <meta property="og:title" content="{{social_title}}">
 <meta property="og:description" content="{{description}}">
 <meta property="og:url" content="{{canonical_url}}">
+<meta property="og:site_name" content="{{site_title}}">
 <meta name="twitter:card" content="{{twitter_card}}">
 <meta name="twitter:title" content="{{social_title}}">
 <meta name="twitter:description" content="{{description}}">
+<meta name="twitter:url" content="{{canonical_url}}">
 {{{og_image_meta}}}{{{robots_meta}}}<script>
 {{{theme_boot_js}}}
 </script>
 <style>
-{{{page_css}}}
+{{{theme_css}}}
+{{{layout_css}}}
+{{{posts_css}}}
+{{{forms_css}}}
+{{{donate_css}}}
 </style>
 </head>
 <body>
 <div class="page">
 <div class="top">
-<a class="brand" href="/">{{site_title}}</a>
-<span class="nav"><a href="/">new</a> | <a href="/latest/1">latest</a> | <a href="/rss">rss</a></span>
+<a class="brand" href="/">{{{brand_logo}}}<span class="brand-title">{{site_title}}</span></a>
+<span class="nav"><a href="/">new</a> | <a href="/latest/1">latest</a> | <a href="/rss">rss</a> | {{{submit_link}}} | <a href="/donate">donate</a></span>
 <div class="top-actions">
 {{{header_actions}}}
 <select id="theme-choice" class="theme-select" aria-label="Theme">

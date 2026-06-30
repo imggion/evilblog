@@ -1,8 +1,13 @@
 <li>
 <div class="post-row">
 <div class="titleline">
-<a href="/post/{{slug}}">{{title}}</a> <span class="sitebit">({{slug}})</span>
+<form class="upvote-form" method="post" action="/post/{{slug}}/upvote">
+<button class="upvote-button" type="submit" aria-label="upvote {{title}}">
+<svg class="upvote-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><path fill="#888888" d="m12.37 8.165l6.43 6.63c.401.414.158 1.205-.37 1.205H5.57c-.528 0-.771-.79-.37-1.205l6.43-6.63a.5.5 0 0 1 .74 0"/></svg>
+</button>
+</form>
+<a href="/post/{{slug}}">{{title}}</a>
 </div>
-<div class="subtext">{{created_at}}{{{tags_html}}}</div>
+<div class="subtext">{{points}} points by {{author}} {{relative_time}}</div>
 </div>
 </li>

@@ -1,11 +1,19 @@
 <form class="admin-form" method="post" action="/admin/post">
-<div><label>id <span>(leave blank to create)</span><input name="id"></label></div>
-<div><label>title<input name="title" required></label></div>
-<div><label>slug <span>(optional)</span><input name="slug"></label></div>
-<div><label>excerpt <span>(optional meta description)</span><textarea name="excerpt" rows="4"></textarea></label></div>
-<div><label>og image <span>(optional absolute or site-relative URL)</span><input name="og_image"></label></div>
-<div><label>status<select name="status"><option value="published">published</option><option value="draft">draft</option></select></label></div>
-<div><label>tags <span>(comma-separated)</span><input name="tags"></label></div>
-<div><label>body<textarea name="body" rows="20"></textarea></label></div>
+<input type="hidden" name="id" value="{{id}}">
+<fieldset class="admin-section">
+<legend>Evilblog post</legend>
+<div><a class="drafts-button" href="{{drafts_href}}">drafts({{draft_count}})</a></div>
+{{{drafts_html}}}
+<div><label>title<input name="title" value="{{title}}" required></label></div>
+<div><label>status<select name="status"><option value="draft"{{{draft_selected}}}>draft</option><option value="published"{{{published_selected}}}>published</option></select></label></div>
+<div><label>body <span>(markdown)</span><textarea name="body" rows="20">{{body}}</textarea></label></div>
+</fieldset>
+<hr class="admin-section-separator">
+<fieldset class="admin-section">
+<legend>Evilblog metadata</legend>
+<div><label>excerpt <span>(optional meta description)</span><textarea name="excerpt" rows="4">{{excerpt}}</textarea></label></div>
+<div><label>og image <span>(optional absolute or site-relative URL)</span><input name="og_image" value="{{og_image}}"></label></div>
+<div><label>tags <span>(comma-separated)</span><input name="tags" value="{{tags}}"></label></div>
+</fieldset>
 <div><button type="submit">submit</button></div>
 </form>

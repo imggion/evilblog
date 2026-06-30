@@ -8,7 +8,7 @@
         // storage is available.
         document.documentElement.setAttribute(
             "data-theme",
-            cleanTheme(localStorage.getItem("easynews-theme") || "system")
+            cleanTheme(localStorage.getItem("evilblog-theme") || "system")
         );
     } catch (_) {
         // Restricted storage should not block the page; the system theme is safe.
