@@ -1,0 +1,35 @@
+.{
+    // Runtime log level. Use .info for normal logs or .debug for lightweight
+    // request/cache/admin diagnostics while developing.
+    .log_level = .debug,
+
+    // Display name used in the header, titles, RSS, and social metadata.
+    .site_title = "evilblog",
+
+    // Optional logo paths rendered to the left of the header title.
+    .site_logo_light = "/statics/evilblog-logo-light.png",
+    .site_logo_dark = "/statics/evilblog-logo.png",
+
+    // Public base URL used for canonical URLs, RSS links, and social metadata.
+    .site_base_url = "http://127.0.0.1:8080",
+
+    // Default metadata for the homepage and social previews.
+    .site_description = "Latest posts from evilblog.",
+    .site_default_og_image = "/statics/og-default.png",
+
+    // Optional agent API. When enabled, POST /api/posts requires this bearer token.
+    .api_gateway_enabled = true,
+    // !!do not forget to change this!!
+    .api_token = "test-token",
+
+    // Donation provider URLs used by /donate.
+    // Comment out a provider URL, or set it to "", to hide that button.
+    .donate_paypal_url = "https://paypal.me/gdjohn4s",
+    .donate_kofi_url = "https://ko-fi.com/",
+    .donate_bitcoin_url = "bitcoin:",
+    .donate_about_readme_url = "https://raw.githubusercontent.com/imggion/imggion/refs/heads/main/README.md",
+    .donate_about_profile_image_url = "https://avatars.githubusercontent.com/u/19678157?v=4",
+
+    // Small text rendered at the bottom of every HTML page.
+    .footer_text = "Copyright 2026 © imggion",
+}

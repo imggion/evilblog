@@ -11,8 +11,12 @@
 
 .zig-cache/
 zig-out/
+dist/
 /release/
 /debug/
 /build/
 /build-*/
 /docgen_tmp/
+
+*.sqlite3
+agents-files
