@@ -1,4 +1,4 @@
-//! Minimal RESP client for the Redis commands used by easynews.
+//! Minimal RESP client for the Redis commands used by evilblog.
 //!
 //! Connections are short-lived by design: this keeps failure handling simple for
 //! the MVP and makes connection pooling an explicit future optimization.

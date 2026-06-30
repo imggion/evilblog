@@ -1,30 +1,85 @@
-//! Cookie-session helpers for the single-admin workflow.
+//! Cookie-session helpers and viewer roles.
 //!
-//! Sessions are signed from configured credentials so the MVP avoids a session
-//! table while still rejecting forged admin cookies.
+//! Sessions are signed with SESSION_SECRET and revalidated against SQLite users.
 const std = @import("std");
 const Config = @import("config.zig").Config;
+const db = @import("db.zig");
+const user = @import("user.zig");
 
 const HmacSha256 = std.crypto.auth.hmac.sha2.HmacSha256;
 
-pub const session_cookie_name = "easynews_session";
+pub const session_cookie_name = "evilblog_session";
 
-pub fn sessionUsername(allocator: std.mem.Allocator, cfg: Config, head_buffer: []const u8) !?[]const u8 {
+pub const Role = enum { admin, member };
+
+pub const Viewer = struct {
+    username: []u8,
+    role: Role,
+    must_change_password: bool,
+
+    pub fn deinit(self: *Viewer, allocator: std.mem.Allocator) void {
+        allocator.free(self.username);
+    }
+};
+
+pub fn sessionViewer(allocator: std.mem.Allocator, cfg: Config, users: user.Store, head_buffer: []const u8) !?Viewer {
     const token = cookieValue(head_buffer, session_cookie_name) orelse return null;
-    const expected = tokenFor(allocator, cfg) catch return null;
+    const username = tokenUsername(allocator, cfg, token) catch return null;
+    errdefer allocator.free(username);
+
+    var info = (try users.sessionInfo(username)) orelse {
+        allocator.free(username);
+        return null;
+    };
+    defer info.deinit(allocator);
+
+    const role = roleFromName(info.role) orelse {
+        allocator.free(username);
+        return null;
+    };
+
+    return .{
+        .username = username,
+        .role = role,
+        .must_change_password = info.must_change_password,
+    };
+}
+
+fn tokenUsername(allocator: std.mem.Allocator, cfg: Config, token: []const u8) ![]u8 {
+    const encoded_username = encodedUsernameFromToken(token) orelse return error.InvalidToken;
+    const decoded_len = try std.base64.url_safe_no_pad.Decoder.calcSizeForSlice(encoded_username);
+    const username = try allocator.alloc(u8, decoded_len);
+    errdefer allocator.free(username);
+    try std.base64.url_safe_no_pad.Decoder.decode(username, encoded_username);
+
+    const expected = try tokenFor(allocator, cfg, username);
     defer allocator.free(expected);
-    if (!constantTimeEqual(token, expected)) return null;
-    return cfg.admin_user;
+    if (!constantTimeEqual(token, expected)) return error.InvalidToken;
+    return username;
 }
 
-pub fn validCredentials(cfg: Config, username: []const u8, password: []const u8) bool {
-    const configured_user = cfg.admin_user orelse return false;
-    const configured_password = cfg.admin_password orelse return false;
-    return constantTimeEqual(username, configured_user) and constantTimeEqual(password, configured_password);
+pub fn isAdmin(viewer: Viewer) bool {
+    return viewer.role == .admin;
 }
 
-pub fn loginCookie(allocator: std.mem.Allocator, cfg: Config) ![]u8 {
-    const token = try tokenFor(allocator, cfg);
+pub fn roleFromName(name: []const u8) ?Role {
+    return std.meta.stringToEnum(Role, name);
+}
+
+pub fn authenticate(allocator: std.mem.Allocator, users: user.Store, username: []const u8, password: []const u8, now_seconds: i64, io: std.Io) !?Viewer {
+    var login = (try users.authenticate(username, password, now_seconds, io)) orelse return null;
+    defer login.deinit(allocator);
+
+    const role = roleFromName(login.role) orelse return null;
+    return .{
+        .username = try allocator.dupe(u8, login.username),
+        .role = role,
+        .must_change_password = login.must_change_password,
+    };
+}
+
+pub fn loginCookie(allocator: std.mem.Allocator, cfg: Config, username: []const u8) ![]u8 {
+    const token = try tokenFor(allocator, cfg, username);
     defer allocator.free(token);
     return try std.fmt.allocPrint(
         allocator,
@@ -41,29 +96,33 @@ pub fn clearCookie(allocator: std.mem.Allocator) ![]u8 {
     );
 }
 
-fn tokenFor(allocator: std.mem.Allocator, cfg: Config) ![]u8 {
-    const user = cfg.admin_user orelse return error.AuthNotConfigured;
-    const password = cfg.admin_password orelse return error.AuthNotConfigured;
-
-    // The admin password doubles as HMAC key so the single-user deployment does
-    // not need a separate session-secret setting.
-    const message = try std.fmt.allocPrint(allocator, "easynews-session:{s}", .{user});
+fn tokenFor(allocator: std.mem.Allocator, cfg: Config, username: []const u8) ![]u8 {
+    const message = try std.fmt.allocPrint(allocator, "evilblog-session:v2:{s}", .{username});
     defer allocator.free(message);
 
     var mac: [HmacSha256.mac_length]u8 = undefined;
-    HmacSha256.create(&mac, message, password);
+    HmacSha256.create(&mac, message, cfg.session_secret);
 
-    const encoded_user_len = std.base64.url_safe_no_pad.Encoder.calcSize(user.len);
+    const encoded_user_len = std.base64.url_safe_no_pad.Encoder.calcSize(username.len);
     const encoded_mac_len = std.base64.url_safe_no_pad.Encoder.calcSize(mac.len);
-    const token = try allocator.alloc(u8, "v1.".len + encoded_user_len + 1 + encoded_mac_len);
+    const token = try allocator.alloc(u8, "v2.".len + encoded_user_len + 1 + encoded_mac_len);
     var offset: usize = 0;
-    @memcpy(token[offset..][0.."v1.".len], "v1.");
-    offset += "v1.".len;
-    offset += std.base64.url_safe_no_pad.Encoder.encode(token[offset..][0..encoded_user_len], user).len;
+    @memcpy(token[offset..][0.."v2.".len], "v2.");
+    offset += "v2.".len;
+    offset += std.base64.url_safe_no_pad.Encoder.encode(token[offset..][0..encoded_user_len], username).len;
     token[offset] = '.';
     offset += 1;
     offset += std.base64.url_safe_no_pad.Encoder.encode(token[offset..][0..encoded_mac_len], &mac).len;
     return token[0..offset];
+}
+
+fn encodedUsernameFromToken(token: []const u8) ?[]const u8 {
+    if (!std.mem.startsWith(u8, token, "v2.")) return null;
+    const username_start = "v2.".len;
+    const username_end = std.mem.indexOfScalarPos(u8, token, username_start, '.') orelse return null;
+    if (username_end == username_start) return null;
+    if (username_end + 1 >= token.len) return null;
+    return token[username_start..username_end];
 }
 
 pub fn headerValue(head_buffer: []const u8, name: []const u8) ?[]const u8 {
@@ -106,30 +165,57 @@ test "header lookup ignores case" {
 }
 
 test "cookie lookup trims cookie pairs" {
-    const value = cookieValue("GET / HTTP/1.1\r\nCookie: foo=1; easynews_session=abc; theme=dark\r\n\r\n", session_cookie_name).?;
+    const value = cookieValue("GET / HTTP/1.1\r\nCookie: foo=1; evilblog_session=abc; theme=dark\r\n\r\n", session_cookie_name).?;
     try std.testing.expectEqualStrings("abc", value);
 }
 
-test "session token validates configured admin" {
+test "session token validates configured admin viewer" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const db_path = try std.fmt.allocPrint(std.testing.allocator, ".zig-cache/tmp/{s}/evilblog.sqlite3", .{&tmp.sub_path});
+    defer std.testing.allocator.free(db_path);
+
     const cfg: Config = .{
         .blog_host = "127.0.0.1",
         .blog_port = 8080,
+        .log_level = .info,
+        .sqlite_path = db_path,
         .redis_host = "127.0.0.1",
         .redis_port = 6379,
-        .admin_user = "admin",
-        .admin_password = "secret",
-        .site_title = "easynews",
+        .session_secret = "0123456789abcdef0123456789abcdef",
+        .api_gateway_enabled = false,
+        .api_token = "",
+        .site_title = "evilblog",
+        .site_logo = "",
+        .site_logo_light = "",
+        .site_logo_dark = "",
         .site_base_url = "http://127.0.0.1:8080",
-        .site_description = "Latest posts from easynews.",
-        .site_default_og_image = "http://127.0.0.1:8080/static/og-default.png",
-        .footer_text = "easynews",
+        .site_description = "Latest posts from evilblog.",
+        .site_default_og_image = "http://127.0.0.1:8080/statics/og-default.png",
+        .donate_paypal_url = "https://www.paypal.com/donate",
+        .donate_kofi_url = "https://ko-fi.com/",
+        .donate_bitcoin_url = "bitcoin:",
+        .donate_about_readme_url = "",
+        .donate_about_profile_image_url = "",
+        .footer_text = "evilblog",
     };
 
-    const cookie = try loginCookie(std.testing.allocator, cfg);
+    try db.migrate(std.testing.allocator, cfg);
+    const users: user.Store = .{ .allocator = std.testing.allocator, .cfg = cfg };
+    const password = (try users.bootstrapDefaultAdminIfEmpty(std.testing.io, 100)).?;
+    defer std.testing.allocator.free(password);
+
+    const cookie = try loginCookie(std.testing.allocator, cfg, "admin");
     defer std.testing.allocator.free(cookie);
     const request = try std.fmt.allocPrint(std.testing.allocator, "GET /admin HTTP/1.1\r\nCookie: {s}\r\n\r\n", .{cookie});
     defer std.testing.allocator.free(request);
 
-    const username = (try sessionUsername(std.testing.allocator, cfg, request)).?;
-    try std.testing.expectEqualStrings("admin", username);
+    var viewer = (try sessionViewer(std.testing.allocator, cfg, users, request)).?;
+    defer viewer.deinit(std.testing.allocator);
+    try std.testing.expectEqualStrings("admin", viewer.username);
+    try std.testing.expectEqual(Role.admin, viewer.role);
+    try std.testing.expect(isAdmin(viewer));
+    try std.testing.expect(viewer.must_change_password);
+    try std.testing.expectEqualStrings("admin", @tagName(viewer.role));
 }
