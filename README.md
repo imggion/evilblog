@@ -25,8 +25,9 @@ The extra idea is agent-friendly writing: posts are plain Markdown, routes are e
 - CSS and small browser scripts are embedded at build time.
 - Post bodies are stored as restricted Markdown, not raw HTML.
 - The app runs as a single native binary.
+- ReleaseSmall binaries produced by `make build-all` are under 5 MB each.
 
-On macOS the release binary still links Apple's system runtime (`/usr/lib/libSystem.B.dylib`). SQLite is not a runtime dependency because it is compiled in from `vendor/sqlite`.
+SQLite is not a runtime dependency because it is compiled in from `vendor/sqlite`.
 
 ## Features
 
@@ -37,27 +38,9 @@ On macOS the release binary still links Apple's system runtime (`/usr/lib/libSys
 - RSS feed.
 - Upvotes for signed-in users.
 - Optional Redis cache.
+- Optional token-authenticated post creation API for agents.
 - Donate page with optional README-backed `about me` section.
 - Built-in social metadata and default Open Graph image.
-
-## Real Local Measurement
-
-Measured on Apple Silicon macOS with Zig 0.16.0 using:
-
-```sh
-zig build -Doptimize=ReleaseSmall
-```
-
-Then the server was started with a temporary SQLite database and hit once on `/`, `/rss`, and `/donate`.
-
-| Metric | Result |
-| --- | ---: |
-| Binary size | 16,030,200 bytes, about 15.3 MiB |
-| Idle RSS | 13,360 KiB, about 13.0 MiB |
-| RSS after `/`, `/rss`, `/donate` | 13,360 KiB, about 13.0 MiB |
-| Dynamic links on macOS | `/usr/lib/libSystem.B.dylib` |
-
-This is a small idle sample, not a load test.
 
 ## Requirements
 
@@ -84,6 +67,26 @@ For a faster optimized build instead of the smallest one:
 
 ```sh
 zig build -Doptimize=ReleaseFast
+```
+
+Build release binaries for Linux and Windows:
+
+```sh
+make build-all
+```
+
+`make build-all` uses `ReleaseSmall` by default and writes:
+
+- `dist/evilblog-linux-x86_64`
+- `dist/evilblog-linux-aarch64`
+- `dist/evilblog-linux-armv7`
+- `dist/evilblog-windows-x86_64.exe`
+- `dist/evilblog-windows-x86.exe`
+
+Use a different optimization mode if needed:
+
+```sh
+make build-all BUILD_ALL_OPTIMIZE=ReleaseFast
 ```
 
 ## Run
@@ -120,6 +123,9 @@ Most public settings live in `evilblog.zon`:
     .site_logo_dark = "/statics/evilblog-logo.png",
     .site_base_url = "https://example.com",
 
+    .api_gateway_enabled = false,
+    .api_token = "",
+
     .donate_paypal_url = "https://www.paypal.com/donate",
     .donate_kofi_url = "https://ko-fi.com/example",
     .donate_bitcoin_url = "bitcoin:bc1qexample",
@@ -138,7 +144,45 @@ Useful environment variables:
 - `REDIS_HOST`, default `127.0.0.1`
 - `REDIS_PORT`, default `6379`
 - `SESSION_SECRET`, required
+- `API_TOKEN`, optional override for the agent post API token
 - `SITE_BASE_URL`, used for canonical URLs, RSS, and social metadata
+
+## Agent Post API
+
+Enable the API in `evilblog.zon` and set a token:
+
+```zig
+.api_gateway_enabled = true,
+.api_token = "replace-with-a-long-random-token",
+```
+
+Then agents can create posts with `POST /api/posts` using:
+
+```http
+Authorization: Bearer <api_token>
+```
+
+Request body:
+
+```json
+{
+  "title": "Post title",
+  "body": "Post body in Markdown",
+  "status": "draft"
+}
+```
+
+## Hermes Skill
+
+This repository includes a Hermes skill under `skills/` for delegating blog post creation to an agent.
+
+To install it, give Hermes this repository and tell it:
+
+```text
+Read the skill in this repository under /skills and install it into yourself.
+```
+
+After installing the skill, configure Hermes with `EVILBLOG_API_KEY` in its environment. The value must match `api_token` in `evilblog.zon` or the `API_TOKEN` environment variable used by Evilblog.
 
 ## Redis
 
