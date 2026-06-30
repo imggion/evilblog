@@ -1,105 +1,171 @@
-# easynews
+<p align="center">
+  <img src="statics/evilblog-logo.png" alt="Evilblog logo" width="96">
+</p>
 
-easynews is a small Zig 0.16.0 blog engine inspired by Lamer News and Hacker News. It renders server-side HTML, stores posts in Redis, and intentionally keeps the code direct enough to read end-to-end.
+<h1 align="center">Evilblog</h1>
 
-## Routes
+<p align="center">
+  A tiny dependency-free Zig blog engine.
+</p>
 
-- `GET /` lists published posts.
-- `GET /post/:slug` shows one post.
-- `GET /latest/:page` shows the paginated archive.
-- `GET /rss` emits an RSS feed.
-- `GET /signin` shows the signin form.
-- `POST /signin` creates a signed session cookie.
-- `POST /signout` clears the signed session cookie.
-- `GET /admin` shows the session-protected post form.
-- `POST /admin/post` creates or updates a post when the session token is valid.
+## What It Is
 
-## Run Redis
+Evilblog is a small blog engine written in Zig 0.16.
 
-With Docker:
+It is inspired by [Lamer News](https://github.com/antirez/lamernews), the blog/news engine by Salvatore Sanfilippo, [@antirez](https://github.com/antirez).
+
+The extra idea is agent-friendly writing: posts are plain Markdown, routes are explicit, and the project structure is documented so an agent can be delegated to draft or write a blog post without needing a JavaScript stack.
+
+## Design
+
+- No package-manager dependencies: `build.zig.zon` has `.dependencies = .{}`.
+- SQLite is vendored and compiled into the executable.
+- Redis is optional and used only as a best-effort cache.
+- HTML is rendered server-side.
+- CSS and small browser scripts are embedded at build time.
+- Post bodies are stored as restricted Markdown, not raw HTML.
+- The app runs as a single native binary.
+
+On macOS the release binary still links Apple's system runtime (`/usr/lib/libSystem.B.dylib`). SQLite is not a runtime dependency because it is compiled in from `vendor/sqlite`.
+
+## Features
+
+- Public post list and single post pages.
+- Admin-only post creation and editing.
+- Drafts.
+- Anonymous comments with nested replies.
+- RSS feed.
+- Upvotes for signed-in users.
+- Optional Redis cache.
+- Donate page with optional README-backed `about me` section.
+- Built-in social metadata and default Open Graph image.
+
+## Real Local Measurement
+
+Measured on Apple Silicon macOS with Zig 0.16.0 using:
 
 ```sh
-docker run --rm -d --name easynews-redis -p 6379:6379 redis:7-alpine
+zig build -Doptimize=ReleaseSmall
 ```
 
-Stop it when you are done:
+Then the server was started with a temporary SQLite database and hit once on `/`, `/rss`, and `/donate`.
+
+| Metric | Result |
+| --- | ---: |
+| Binary size | 16,030,200 bytes, about 15.3 MiB |
+| Idle RSS | 13,360 KiB, about 13.0 MiB |
+| RSS after `/`, `/rss`, `/donate` | 13,360 KiB, about 13.0 MiB |
+| Dynamic links on macOS | `/usr/lib/libSystem.B.dylib` |
+
+This is a small idle sample, not a load test.
+
+## Requirements
+
+- Zig 0.16.0
+- `SESSION_SECRET` with at least 32 bytes
+- Redis only if you want cache
+
+Zig does not load `.env` files by itself. Export environment variables or prefix the run command.
+
+## Build
 
 ```sh
-docker stop easynews-redis
+zig build test
+zig build -Doptimize=ReleaseSmall
 ```
 
-Or with a local Redis install:
+The binary is written to:
 
 ```sh
-redis-server
+./zig-out/bin/evilblog
 ```
 
-## Run the app
-
-`zig build run` starts only the Zig web app. Redis must already be running,
-because the homepage reads the published post list from Redis.
+For a faster optimized build instead of the smallest one:
 
 ```sh
-zig build
-ADMIN_USER=admin ADMIN_PASSWORD=secret zig build run
+zig build -Doptimize=ReleaseFast
 ```
 
-Then open `http://127.0.0.1:8080`.
+## Run
 
-On a fresh Redis database the homepage is valid but empty. Create the first
-post by clicking `signin`, using the credentials from `ADMIN_USER` and
-`ADMIN_PASSWORD`, and then submitting the protected post form.
+Generate a session secret:
 
-Signin uses an `HttpOnly` session cookie containing a signed token. Direct
-requests to `POST /admin/post` fail with `401 Unauthorized` unless that token is
-present and valid.
+```sh
+openssl rand -hex 32
+```
 
-## Environment
+Start the server:
 
-Application-facing settings can be edited in `easynews.zon`:
+```sh
+SESSION_SECRET=0123456789abcdef0123456789abcdef zig build run
+```
+
+Open:
+
+```text
+http://127.0.0.1:8080
+```
+
+On first startup with an empty users table, Evilblog creates an `admin` user, prints a one-time password to the console, and forces a password change before admin routes can be used.
+
+## Configuration
+
+Most public settings live in `evilblog.zon`:
 
 ```zig
 .{
-    .site_title = "easynews",
+    .log_level = .info,
+    .site_title = "evilblog",
+    .site_logo_light = "/statics/evilblog-logo-light.png",
+    .site_logo_dark = "/statics/evilblog-logo.png",
     .site_base_url = "https://example.com",
-    .footer_text = "easynews: small Redis-backed Zig blog",
+
+    .donate_paypal_url = "https://www.paypal.com/donate",
+    .donate_kofi_url = "https://ko-fi.com/example",
+    .donate_bitcoin_url = "bitcoin:bc1qexample",
+    .donate_about_readme_url = "https://raw.githubusercontent.com/user/user/refs/heads/main/README.md",
+    .donate_about_profile_image_url = "https://avatars.githubusercontent.com/u/19678157?v=4",
+
+    .footer_text = "evilblog",
 }
 ```
 
-`site_base_url` is the public domain used for RSS links, canonical URLs, and
-social metadata. The file is parsed with Zig's standard `std.zon` parser, so no
-YAML or external config dependency is needed.
-
-Environment variables still work and override `easynews.zon` when present:
+Useful environment variables:
 
 - `BLOG_HOST`, default `127.0.0.1`
 - `BLOG_PORT`, default `8080`
+- `SQLITE_PATH`, default `evilblog.sqlite3`
 - `REDIS_HOST`, default `127.0.0.1`
 - `REDIS_PORT`, default `6379`
-- `ADMIN_USER`, required for admin access
-- `ADMIN_PASSWORD`, required for admin access
-- `SITE_TITLE`, default `easynews`
-- `SITE_BASE_URL`, default `http://BLOG_HOST:BLOG_PORT`
-- `SITE_DESCRIPTION`, default `Latest posts from SITE_TITLE.`
-- `SITE_DEFAULT_OG_IMAGE`, default `SITE_BASE_URL/static/og-default.png`
-- `SITE_FOOTER_TEXT`, default `SITE_TITLE: small Redis-backed Zig blog`
+- `SESSION_SECRET`, required
+- `SITE_BASE_URL`, used for canonical URLs, RSS, and social metadata
 
-`BLOG_HOST` and `REDIS_HOST` are currently expected to be IP literals, such as `127.0.0.1`.
+## Redis
 
-## SEO and social metadata
+Redis is optional. Without Redis, Evilblog reads and writes through SQLite.
 
-HTML pages include canonical URLs, meta descriptions, Open Graph tags, and
-Twitter card tags. `SITE_BASE_URL` must be the public production URL for
-canonical and social URLs to be correct.
+Run Redis locally with Docker:
 
-The global social image comes from `SITE_DEFAULT_OG_IMAGE`. If you keep the
-default `/static/og-default.png` path, serve that asset from nginx or set the
-env var to an absolute image URL.
+```sh
+docker run --rm -d --name evilblog-redis -p 6379:6379 redis:7-alpine
+```
 
-Posts also store optional `excerpt` and `og_image` fields. If `excerpt` is
-blank, easynews generates a short description from the body. If `og_image` is
-blank, the global `SITE_DEFAULT_OG_IMAGE` is used.
+Stop it:
 
-## Notes
+```sh
+docker stop evilblog-redis
+```
 
-The Redis client is a tiny RESP client that implements only the commands this app uses. It opens short-lived TCP connections per command, which is simple and fine for the MVP behind nginx. A production version would likely add connection reuse, stronger date formatting, CSRF protection, tag pages, and a richer edit workflow.
+## Markdown
+
+Posts are written in a small safe Markdown subset:
+
+- paragraphs and line breaks
+- `#`, `##`, `###` headings
+- `**bold**`, `_italic_`, and inline code
+- links and bare URLs
+- images by URL
+- fenced code blocks
+- simple ordered and unordered lists
+
+Raw HTML is escaped.
