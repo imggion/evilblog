@@ -10,6 +10,7 @@ dist
 *.sqlite-*
 *.log
 .DS_Store
+.env.prod
 Dockerfile
 README.md
 agents-files

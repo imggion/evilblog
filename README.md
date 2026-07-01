@@ -112,6 +112,24 @@ http://127.0.0.1:8080
 
 On first startup with an empty users table, Evilblog creates an `admin` user, prints a one-time password to the console, and forces a password change before admin routes can be used.
 
+## Docker Compose
+
+Create the production env file from the example and set real secrets:
+
+```sh
+cp .env.prod.example .env.prod
+```
+
+Start Evilblog with Redis:
+
+```sh
+docker compose --env-file .env.prod up --build
+```
+
+The compose file overrides `REDIS_HOST=redis` so the app reaches Redis on the
+Docker network. Keep `REDIS_USERNAME` and `REDIS_PASSWORD` in `.env.prod`; leave
+both empty for an unauthenticated Redis.
+
 ## Configuration
 
 Most public settings live in `evilblog.zon`:

@@ -19,4 +19,5 @@ dist/
 /docgen_tmp/
 
 *.sqlite3
+.env.prod
 agents-files

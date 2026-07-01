@@ -50,6 +50,7 @@ RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /app/zig-out/bin/evilblog /app/evilblog
 COPY --from=builder /app/evilblog.zon /app/evilblog.zon
+COPY --from=builder /app/public /app/public
 COPY --from=builder /app/statics /app/statics
 
 CMD ["/app/evilblog"]

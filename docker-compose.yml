@@ -1,0 +1,45 @@
+services:
+  evilblog:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-0.1.0-docker}
+    image: evilblog:${VERSION:-0.1.0-docker}
+    env_file:
+      - ${EVILBLOG_ENV_FILE:-.env.prod}
+    environment:
+      BLOG_HOST: 0.0.0.0
+      BLOG_PORT: ${BLOG_PORT:-8080}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SQLITE_PATH: /data/evilblog.sqlite3
+    ports:
+      - "${BLOG_PORT:-8080}:${BLOG_PORT:-8080}"
+    volumes:
+      - evilblog-data:/data
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_USERNAME: ${REDIS_USERNAME:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command:
+      - sh
+      - -c
+      - |
+        if [ -n "$$REDIS_PASSWORD" ] && [ -n "$$REDIS_USERNAME" ]; then
+          printf 'user default off\nuser %s on >%s ~* +@all\n' "$$REDIS_USERNAME" "$$REDIS_PASSWORD" > /tmp/users.acl
+          exec redis-server --aclfile /tmp/users.acl --appendonly yes
+        elif [ -n "$$REDIS_PASSWORD" ]; then
+          exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
+        else
+          exec redis-server --appendonly yes
+        fi
+    volumes:
+      - redis-data:/data
+
+volumes:
+  evilblog-data:
+  redis-data:

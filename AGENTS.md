@@ -67,6 +67,8 @@ Use the local `rtk` prefix for shell commands.
   into `dist/`; use `BUILD_ALL_VERSION=v1.2.3` to override the tag-derived name.
 - `rtk make docker-build VERSION=1.2.3` builds Docker image `evilblog:1.2.3`
   and passes the same value to `-Dversion`.
+- `rtk docker compose --env-file .env.prod up --build` starts Evilblog and Redis
+  together; compose overrides `REDIS_HOST=redis` for the app container.
 - `rtk env SESSION_SECRET=0123456789abcdef0123456789abcdef zig build run` starts
   the server on `http://127.0.0.1:8080`.
 - `rtk make debug`, `rtk make release`, `rtk make build-all`, `rtk make test`,
