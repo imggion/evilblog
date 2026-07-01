@@ -72,8 +72,8 @@ Use the local `rtk` prefix for shell commands.
 GitHub Actions live in `.github/workflows/` and Forgejo Actions live in
 `.forgejo/workflows/`. Both use one workflow per supported release target:
 Linux x86_64, Linux aarch64, Linux armv7, Windows x86_64, and Windows x86.
-GitHub workflows use `ubuntu-latest`; Forgejo workflows use the local
-`self-hosted` runner label. The Linux x86_64 workflow also runs
+GitHub workflows use `ubuntu-latest`; Forgejo workflows use the local `linux`
+runner label. The Linux x86_64 workflow also runs
 `zig fmt --check` and `zig build test`; all workflows cross-build with
 `-Doptimize=ReleaseSmall` and `-Dversion=0.0.0-ci`.
 
