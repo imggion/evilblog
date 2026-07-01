@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: linux
+    runs-on: docker
     steps:
       - uses: actions/checkout@v4
       - uses: mlugg/setup-zig@v2
