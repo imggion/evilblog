@@ -1,7 +1,7 @@
 .{
     // Runtime log level. Use .info for normal logs or .debug for lightweight
     // request/cache/admin diagnostics while developing.
-    .log_level = .debug,
+    .log_level = .info,
 
     // Display name used in the header, titles, RSS, and social metadata.
     .site_title = "evilblog",
