@@ -1,0 +1,17 @@
+name: Build Windows x86_64
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Build
+        run: zig build -Doptimize=ReleaseSmall -Dtarget=x86_64-windows-gnu -Dversion=0.0.0-ci
