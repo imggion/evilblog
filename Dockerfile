@@ -6,7 +6,7 @@ FROM alpine:latest AS builder
 
 ARG ZIG_VERSION=0.16.0
 ARG TARGETARCH
-ARG VERSION=0.0.0-docker
+ARG VERSION=
 
 RUN apk add --no-cache \
     curl \
@@ -36,7 +36,11 @@ WORKDIR /app
 
 COPY . .
 
-RUN zig build -Doptimize=ReleaseSmall -Dversion=${VERSION}
+RUN if [ -n "${VERSION}" ]; then \
+      zig build -Doptimize=ReleaseSmall -Dversion="${VERSION}"; \
+    else \
+      zig build -Doptimize=ReleaseSmall; \
+    fi
 
 
 # ----------------------------------------------------------------

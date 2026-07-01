@@ -3,8 +3,8 @@ services:
     build:
       context: .
       args:
-        VERSION: ${VERSION:-0.1.0-docker}
-    image: evilblog:${VERSION:-0.1.0-docker}
+        VERSION: ${VERSION:-}
+    image: evilblog:${IMAGE_TAG:-local}
     env_file:
       - ${EVILBLOG_ENV_FILE:-.env.prod}
     environment:

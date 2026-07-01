@@ -123,7 +123,15 @@ cp .env.prod.example .env.prod
 Start Evilblog with Redis:
 
 ```sh
-docker compose --env-file .env.prod up --build
+make up
+```
+
+`make up` tags the Docker image with the current Git version. If `VERSION` is
+not set, the binary version is computed by `build.zig` from Git tags and commit
+metadata. Pin a specific version with:
+
+```sh
+make up VERSION=v0.1.0
 ```
 
 The compose file overrides `REDIS_HOST=redis` so the app reaches Redis on the
