@@ -12,6 +12,9 @@ the default social image, are served from `statics/`; donation buttons are
 rendered as CSS-only links, with an optional README-backed about section fetched
 from `donate_about_readme_url` and an optional profile image from
 `donate_about_profile_image_url`.
+Redis host/port live in `evilblog.zon`; `REDIS_USERNAME`/`REDIS_PASSWORD` are
+environment-only credentials, with `REDIS_HOST`/`REDIS_PORT` available as runtime
+overrides.
 
 Anonymous post comments are stored in SQLite through `src/comment.zig` and
 rendered server-side under each post. Replies are represented by `parent_id` and
@@ -60,8 +63,8 @@ Use the local `rtk` prefix for shell commands.
 - `rtk zig build` builds the application.
 - `rtk zig build -Dversion=1.2.3-test` overrides the generated app version for
   release or CI builds.
-- `rtk make build-all` builds ReleaseSmall Linux and Windows binaries into
-  `dist/`.
+- `rtk make build-all` builds versioned ReleaseSmall Linux and Windows binaries
+  into `dist/`; use `BUILD_ALL_VERSION=v1.2.3` to override the tag-derived name.
 - `rtk env SESSION_SECRET=0123456789abcdef0123456789abcdef zig build run` starts
   the server on `http://127.0.0.1:8080`.
 - `rtk make debug`, `rtk make release`, `rtk make build-all`, `rtk make test`,

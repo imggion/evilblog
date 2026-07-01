@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="statics/evilblog-logo.png" alt="Evilblog logo" width="96">
+  <img src="public/android-chrome-192x192.png" alt="Evilblog logo" width="96">
 </p>
 
 <h1 align="center">Evilblog</h1>
@@ -77,16 +77,17 @@ make build-all
 
 `make build-all` uses `ReleaseSmall` by default and writes:
 
-- `dist/evilblog-linux-x86_64`
-- `dist/evilblog-linux-aarch64`
-- `dist/evilblog-linux-armv7`
-- `dist/evilblog-windows-x86_64.exe`
-- `dist/evilblog-windows-x86.exe`
+- `dist/evilblog-v0.1.0-linux-x86_64`
+- `dist/evilblog-v0.1.0-linux-aarch64`
+- `dist/evilblog-v0.1.0-linux-armv7`
+- `dist/evilblog-v0.1.0-windows-x86_64.exe`
+- `dist/evilblog-v0.1.0-windows-x86.exe`
 
-Use a different optimization mode if needed:
+It gets the version from the latest `v*` Git tag. Override version or
+optimization if needed:
 
 ```sh
-make build-all BUILD_ALL_OPTIMIZE=ReleaseFast
+make build-all BUILD_ALL_VERSION=v0.1.0 BUILD_ALL_OPTIMIZE=ReleaseFast
 ```
 
 ## Run
@@ -122,6 +123,8 @@ Most public settings live in `evilblog.zon`:
     .site_logo_light = "/statics/evilblog-logo-light.png",
     .site_logo_dark = "/statics/evilblog-logo.png",
     .site_base_url = "https://example.com",
+    .redis_host = "127.0.0.1",
+    .redis_port = 6379,
 
     .api_gateway_enabled = false,
     .api_token = "",
@@ -141,8 +144,10 @@ Useful environment variables:
 - `BLOG_HOST`, default `127.0.0.1`
 - `BLOG_PORT`, default `8080`
 - `SQLITE_PATH`, default `evilblog.sqlite3`
-- `REDIS_HOST`, default `127.0.0.1`
-- `REDIS_PORT`, default `6379`
+- `REDIS_HOST`, optional override for `redis_host` in `evilblog.zon`
+- `REDIS_PORT`, optional override for `redis_port` in `evilblog.zon`
+- `REDIS_USERNAME`, optional Redis ACL username
+- `REDIS_PASSWORD`, optional Redis password
 - `SESSION_SECRET`, required
 - `API_TOKEN`, optional override for the agent post API token
 - `SITE_BASE_URL`, used for canonical URLs, RSS, and social metadata
@@ -187,6 +192,16 @@ After installing the skill, configure Hermes with `EVILBLOG_API_KEY` in its envi
 ## Redis
 
 Redis is optional. Without Redis, Evilblog reads and writes through SQLite.
+Set the cache endpoint in `evilblog.zon`:
+
+```zig
+.redis_host = "127.0.0.1",
+.redis_port = 6379,
+```
+
+If Redis requires authentication, keep credentials out of the file and set
+`REDIS_USERNAME`/`REDIS_PASSWORD` in the environment. `REDIS_HOST` and
+`REDIS_PORT` can still override the file values at runtime.
 
 Run Redis locally with Docker:
 

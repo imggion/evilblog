@@ -12,6 +12,8 @@ pub const Config = struct {
     sqlite_path: []const u8,
     redis_host: []const u8,
     redis_port: u16,
+    redis_username: []const u8 = "",
+    redis_password: []const u8 = "",
     session_secret: []const u8,
     api_gateway_enabled: bool,
     api_token: []const u8,
@@ -34,7 +36,7 @@ pub const Config = struct {
         const blog_host = try envOrDefault(allocator, environ, "BLOG_HOST", "127.0.0.1");
         const blog_port = try envPort(allocator, environ, "BLOG_PORT", 8080);
         const sqlite_path = try envOrDefault(allocator, environ, "SQLITE_PATH", "evilblog.sqlite3");
-        const redis_host = try envOrDefault(allocator, environ, "REDIS_HOST", "127.0.0.1");
+        const redis_host = try envOrFileDefault(allocator, environ, "REDIS_HOST", file_config.redis_host, "127.0.0.1");
         const site_title = try envOrFileDefault(allocator, environ, "SITE_TITLE", file_config.site_title, "evilblog");
         const site_logo = try envOrFileDefault(allocator, environ, "SITE_LOGO", file_config.site_logo, "");
         const site_logo_light = try envOrFileDefault(allocator, environ, "SITE_LOGO_LIGHT", file_config.site_logo_light, site_logo);
@@ -60,7 +62,9 @@ pub const Config = struct {
             .log_level = file_config.log_level orelse .info,
             .sqlite_path = sqlite_path,
             .redis_host = redis_host,
-            .redis_port = try envPort(allocator, environ, "REDIS_PORT", 6379),
+            .redis_port = try envOrFilePort(allocator, environ, "REDIS_PORT", file_config.redis_port, 6379),
+            .redis_username = try envOrDefault(allocator, environ, "REDIS_USERNAME", ""),
+            .redis_password = try envOrDefault(allocator, environ, "REDIS_PASSWORD", ""),
             .session_secret = try sessionSecretEnv(allocator, environ),
             .api_gateway_enabled = file_config.api_gateway_enabled orelse false,
             .api_token = try envOrFileDefault(allocator, environ, "API_TOKEN", file_config.api_token, ""),
@@ -98,6 +102,8 @@ const FileConfig = struct {
     footer_text: ?[]const u8 = null,
     api_gateway_enabled: ?bool = null,
     api_token: ?[]const u8 = null,
+    redis_host: ?[]const u8 = null,
+    redis_port: ?u16 = null,
 };
 
 fn loadFileConfig(allocator: std.mem.Allocator, io: std.Io) !FileConfig {
@@ -188,6 +194,20 @@ fn envPort(
 ) !u16 {
     const raw = std.process.Environ.getAlloc(environ, allocator, key) catch |err| switch (err) {
         error.EnvironmentVariableMissing => return default_value,
+        else => |e| return e,
+    };
+    return std.fmt.parseInt(u16, raw, 10);
+}
+
+fn envOrFilePort(
+    allocator: std.mem.Allocator,
+    environ: std.process.Environ,
+    key: []const u8,
+    file_value: ?u16,
+    default_value: u16,
+) !u16 {
+    const raw = std.process.Environ.getAlloc(environ, allocator, key) catch |err| switch (err) {
+        error.EnvironmentVariableMissing => return file_value orelse default_value,
         else => |e| return e,
     };
     return std.fmt.parseInt(u16, raw, 10);

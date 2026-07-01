@@ -76,6 +76,8 @@ pub const Store = struct {
             .io = self.io,
             .host = self.cfg.redis_host,
             .port = self.cfg.redis_port,
+            .username = self.cfg.redis_username,
+            .password = self.cfg.redis_password,
         };
     }
 

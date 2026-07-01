@@ -12,6 +12,8 @@ pub const Client = struct {
     io: Io,
     host: []const u8,
     port: u16,
+    username: []const u8 = "",
+    password: []const u8 = "",
 
     pub fn commandStatus(self: Client, args: []const []const u8) !void {
         var conn: Connection = undefined;
@@ -64,8 +66,19 @@ pub const Connection = struct {
     pub fn init(self: *Connection, client: Client) !void {
         const address = try net.IpAddress.parse(client.host, client.port);
         self.stream = try net.IpAddress.connect(&address, client.io, .{ .mode = .stream, .protocol = .tcp });
+        errdefer self.stream.close(client.io);
         self.reader_impl = self.stream.reader(client.io, &self.read_buffer);
         self.writer_impl = self.stream.writer(client.io, &self.write_buffer);
+
+        if (client.password.len > 0) {
+            if (client.username.len > 0) {
+                try writeCommand(&self.writer_impl.interface, &.{ "AUTH", client.username, client.password });
+            } else {
+                try writeCommand(&self.writer_impl.interface, &.{ "AUTH", client.password });
+            }
+            try self.writer_impl.interface.flush();
+            try readStatus(&self.reader_impl.interface);
+        }
     }
 
     pub fn deinit(self: *Connection, io: Io) void {
@@ -162,4 +175,12 @@ fn readBulkAfterMarker(allocator: std.mem.Allocator, reader: *Io.Reader) !?[]u8 
 fn readLine(reader: *Io.Reader) ![]const u8 {
     const line = (try reader.takeDelimiter('\n')) orelse return error.UnexpectedRedisResponse;
     return std.mem.trimEnd(u8, line, "\r");
+}
+
+test "writeCommand formats RESP arrays" {
+    var out = std.Io.Writer.Allocating.init(std.testing.allocator);
+    defer out.deinit();
+
+    try writeCommand(&out.writer, &.{ "AUTH", "user", "secret" });
+    try std.testing.expectEqualStrings("*3\r\n$4\r\nAUTH\r\n$4\r\nuser\r\n$6\r\nsecret\r\n", out.written());
 }
