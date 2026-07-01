@@ -65,6 +65,8 @@ Use the local `rtk` prefix for shell commands.
   release or CI builds.
 - `rtk make build-all` builds versioned ReleaseSmall Linux and Windows binaries
   into `dist/`; use `BUILD_ALL_VERSION=v1.2.3` to override the tag-derived name.
+- `rtk make docker-build VERSION=1.2.3` builds Docker image `evilblog:1.2.3`
+  and passes the same value to `-Dversion`.
 - `rtk env SESSION_SECRET=0123456789abcdef0123456789abcdef zig build run` starts
   the server on `http://127.0.0.1:8080`.
 - `rtk make debug`, `rtk make release`, `rtk make build-all`, `rtk make test`,
@@ -75,7 +77,7 @@ Use the local `rtk` prefix for shell commands.
 GitHub Actions live in `.github/workflows/` and Forgejo Actions live in
 `.forgejo/workflows/`. Both use one workflow per supported release target:
 Linux x86_64, Linux aarch64, Linux armv7, Windows x86_64, and Windows x86.
-GitHub workflows use `ubuntu-latest`; Forgejo workflows use the local `linux`
+GitHub workflows use `ubuntu-latest`; Forgejo workflows use the local `docker`
 runner label. The Linux x86_64 workflow also runs
 `zig fmt --check` and `zig build test`; all workflows cross-build with
 `-Doptimize=ReleaseSmall` and `-Dversion=0.0.0-ci`.

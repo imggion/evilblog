@@ -12,6 +12,9 @@ pub const Connection = *c.sqlite3;
 pub const Statement = *c.sqlite3_stmt;
 pub const StepResult = enum { row, done };
 
+// TODO: for myself of the future:
+// use a folder /migrations instead of raw strings of queries.
+// every migration will be a versioned .sql file
 pub fn migrate(allocator: std.mem.Allocator, cfg: Config) !void {
     const conn = try open(allocator, cfg);
     defer close(conn);

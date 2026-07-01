@@ -1,4 +1,4 @@
-.PHONY: debug release build-all test serve run session-secret clean help
+.PHONY: debug release build-all docker-build test serve run session-secret clean help
 
 BUILD_ALL_OPTIMIZE ?= ReleaseSmall
 BUILD_ALL_VERSION ?= $(shell git describe --tags --match 'v[0-9]*' --dirty 2>/dev/null || printf 'v0.0.0-dev')
@@ -25,6 +25,10 @@ build-all:
 	cp "$(DIST_DIR)/tmp/windows-x86/bin/evilblog.exe" "$(DIST_DIR)/evilblog-$(BUILD_ALL_VERSION)-windows-x86.exe"
 	rm -rf "$(DIST_DIR)/tmp"
 
+docker-build:
+	@test -n "$(VERSION)" || (echo "VERSION is required, example: make docker-build VERSION=1.2.3"; exit 1)
+	docker build . -t "evilblog:$(VERSION)" --build-arg "VERSION=$(VERSION)"
+
 test:
 	zig build test
 
@@ -44,6 +48,7 @@ help:
 	@echo "  make debug    Build in Debug mode"
 	@echo "  make release  Build in ReleaseFast mode"
 	@echo "  make build-all  Build versioned ReleaseSmall binaries for Linux and Windows into dist/"
+	@echo "  make docker-build VERSION=1.2.3  Build Docker image evilblog:VERSION"
 	@echo "  make test     Run tests"
 	@echo "  make serve    Start the webserver"
 	@echo "  make run      Alias for serve"
