@@ -8,9 +8,24 @@
   A tiny dependency-free Zig blog engine.
 </p>
 
+## Contents
+
+- [What It Is](#what-it-is)
+- [Design](#design)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Contributing](#contributing)
+- [Build](#build)
+- [Production Docker Compose](#production-docker-compose)
+- [Production Bare Metal](#production-bare-metal)
+- [Configuration](#configuration)
+- [Agent Post API](#agent-post-api)
+- [Hermes Skill](#hermes-skill)
+- [Markdown](#markdown)
+
 ## What It Is
 
-Evilblog is a small blog engine written in Zig 0.16.
+Evilblog is a small blog engine written in Zig 0.16.0
 
 It is inspired by [Lamer News](https://github.com/antirez/lamernews), the blog/news engine by Salvatore Sanfilippo, [@antirez](https://github.com/antirez).
 
@@ -25,7 +40,7 @@ The extra idea is agent-friendly writing: posts are plain Markdown, routes are e
 - CSS and small browser scripts are embedded at build time.
 - Post bodies are stored as restricted Markdown, not raw HTML.
 - The app runs as a single native binary.
-- ReleaseSmall binaries produced by `make build-all` are under 5 MB each.
+- ReleaseSmall binaries are under 5 MB each.
 
 SQLite is not a runtime dependency because it is compiled in from `vendor/sqlite`.
 
@@ -38,7 +53,7 @@ SQLite is not a runtime dependency because it is compiled in from `vendor/sqlite
 - RSS feed.
 - Upvotes for signed-in users.
 - Optional Redis cache.
-- Optional token-authenticated post creation API for agents.
+- Optional token-authenticated post API for agents.
 - Donate page with optional README-backed `about me` section.
 - Built-in social metadata and default Open Graph image.
 
@@ -48,7 +63,35 @@ SQLite is not a runtime dependency because it is compiled in from `vendor/sqlite
 - `SESSION_SECRET` with at least 32 bytes
 - Redis only if you want cache
 
-Zig does not load `.env` files by itself. Export environment variables or prefix the run command.
+Zig does not load `.env` files by itself. Export environment variables, prefix the run command, or use Docker Compose with `.env.prod`.
+
+## Contributing
+
+Run tests:
+
+```sh
+zig build test
+```
+
+Generate a local development session secret:
+
+```sh
+make session-secret
+```
+
+Start the development server:
+
+```sh
+SESSION_SECRET=0123456789abcdef0123456789abcdef zig build run
+```
+
+Open:
+
+```text
+http://127.0.0.1:8080
+```
+
+On first startup with an empty users table, Evilblog creates an `admin` user, prints a one-time password to the console, and forces a password change before admin routes can be used.
 
 ## Build
 
@@ -69,63 +112,7 @@ For a faster optimized build instead of the smallest one:
 zig build -Doptimize=ReleaseFast
 ```
 
-Build release binaries for Linux and Windows:
-
-```sh
-make build-all
-```
-
-`make build-all` uses `ReleaseSmall` by default and writes:
-
-- `dist/evilblog-v0.1.0-linux-x86_64`
-- `dist/evilblog-v0.1.0-linux-aarch64`
-- `dist/evilblog-v0.1.0-linux-armv7`
-- `dist/evilblog-v0.1.0-windows-x86_64.exe`
-- `dist/evilblog-v0.1.0-windows-x86.exe`
-
-It gets the version from the latest `v*` Git tag. Override version or
-optimization if needed:
-
-```sh
-make build-all BUILD_ALL_VERSION=v0.1.0 BUILD_ALL_OPTIMIZE=ReleaseFast
-```
-
-Build all release binaries and create the GitHub release from `dist/`:
-
-```sh
-make deploy
-```
-
-`make deploy` uses the same `BUILD_ALL_VERSION` value for the tag, release name,
-and asset filenames. Override it when cutting a specific release:
-
-```sh
-make deploy BUILD_ALL_VERSION=v0.1.0
-```
-
-## Run
-
-Generate a session secret:
-
-```sh
-openssl rand -hex 32
-```
-
-Start the server:
-
-```sh
-SESSION_SECRET=0123456789abcdef0123456789abcdef zig build run
-```
-
-Open:
-
-```text
-http://127.0.0.1:8080
-```
-
-On first startup with an empty users table, Evilblog creates an `admin` user, prints a one-time password to the console, and forces a password change before admin routes can be used.
-
-## Docker Compose
+## Production Docker Compose
 
 Create the production env file from the example and set real secrets:
 
@@ -133,23 +120,46 @@ Create the production env file from the example and set real secrets:
 cp .env.prod.example .env.prod
 ```
 
-Start Evilblog with Redis:
+Generate `SESSION_SECRET` with `make session-secret` and put it in `.env.prod`.
+
+Start Evilblog and Redis:
 
 ```sh
 make up
 ```
 
-`make up` tags the Docker image with the current Git version. If `VERSION` is
-not set, the binary version is computed by `build.zig` from Git tags and commit
-metadata. Pin a specific version with:
-
-```sh
-make up VERSION=v0.1.0
-```
+`make up` tags the Docker image with the current Git version.
 
 The compose file overrides `REDIS_HOST=redis` so the app reaches Redis on the
 Docker network. Keep `REDIS_USERNAME` and `REDIS_PASSWORD` in `.env.prod`; leave
 both empty for an unauthenticated Redis.
+
+## Production Bare Metal
+
+Build the binary or download it from the release page:
+
+```sh
+zig build -Doptimize=ReleaseSmall
+```
+
+Run the compiled binary from wherever you install it:
+
+```sh
+SESSION_SECRET=<VALUE> ./zig-out/bin/evilblog
+```
+
+For an installed copy, use its real path:
+
+```sh
+SESSION_SECRET=<VALUE> /opt/evilblog/evilblog
+```
+
+By default, SQLite is stored at `evilblog.sqlite3` in the working directory. Set
+`SQLITE_PATH` if you want the database somewhere else.
+
+Redis is optional. To use it, set `redis_host` and `redis_port` in `evilblog.zon`,
+or override them at runtime with `REDIS_HOST` and `REDIS_PORT`. If Redis requires
+auth, set `REDIS_USERNAME` and `REDIS_PASSWORD` in the environment.
 
 ## Configuration
 
@@ -241,32 +251,6 @@ Read the skill in this repository under /skills and install it into yourself.
 
 After installing the skill, configure Hermes with `EVILBLOG_API_KEY` and `EVILBLOG_API_URL` in its environment. The key must match `api_token` in `evilblog.zon` or the `API_TOKEN` environment variable used by Evilblog.
 
-## Redis
-
-Redis is optional. Without Redis, Evilblog reads and writes through SQLite.
-Set the cache endpoint in `evilblog.zon`:
-
-```zig
-.redis_host = "127.0.0.1",
-.redis_port = 6379,
-```
-
-If Redis requires authentication, keep credentials out of the file and set
-`REDIS_USERNAME`/`REDIS_PASSWORD` in the environment. `REDIS_HOST` and
-`REDIS_PORT` can still override the file values at runtime.
-
-Run Redis locally with Docker:
-
-```sh
-docker run --rm -d --name evilblog-redis -p 6379:6379 redis:7-alpine
-```
-
-Stop it:
-
-```sh
-docker stop evilblog-redis
-```
-
 ## Markdown
 
 Posts are written in a small safe Markdown subset:
@@ -280,3 +264,7 @@ Posts are written in a small safe Markdown subset:
 - simple ordered and unordered lists
 
 Raw HTML is escaped.
+
+## License
+
+MIT. See [LICENSE.md](LICENSE.md).
