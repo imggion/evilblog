@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! SQLite-backed post storage with Redis as an optional cache.
 const std = @import("std");
 const Config = @import("config.zig").Config;

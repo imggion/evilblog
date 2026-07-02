@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Server-side HTML renderer for the blog UI.
 //!
 //! Static markup lives in embedded template files; this module keeps the

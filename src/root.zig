@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Public import surface for tests and for any future embedding.
 //!
 //! The executable imports concrete modules directly; this root exists to keep

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Token-authenticated JSON API entry points.
 const std = @import("std");
 

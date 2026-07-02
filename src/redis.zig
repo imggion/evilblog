@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Minimal RESP client for the Redis commands used by evilblog.
 //!
 //! Connections are short-lived by design: this keeps failure handling simple for

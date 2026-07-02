@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Tiny structured logging wrapper over `std.log`.
 const std = @import("std");
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! RSS rendering for the public published-post feed.
 //!
 //! This stays separate from HTML rendering because feed output has a different

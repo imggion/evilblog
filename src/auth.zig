@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Cookie-session helpers and viewer roles.
 //!
 //! Sessions are signed with SESSION_SECRET and revalidated against SQLite users.

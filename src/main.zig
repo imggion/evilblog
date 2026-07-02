@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Process entry point and blocking HTTP accept loop.
 //!
 //! Socket setup stays here so routing, storage, and rendering remain testable

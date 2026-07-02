@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Runtime configuration from `evilblog.zon` plus environment overrides.
 //!
 //! File config owns site metadata for deploys; env vars stay highest priority

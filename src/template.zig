@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Tiny placeholder renderer for embedded HTML fragments.
 //!
 //! The renderer is deliberately limited: templates cannot branch or loop, so

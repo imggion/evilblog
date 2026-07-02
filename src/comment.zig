@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! SQLite-backed anonymous comments for posts.
 const std = @import("std");
 

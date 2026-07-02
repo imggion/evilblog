@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! SQLite connection setup, schema migrations, and statement helpers.
 const std = @import("std");
 

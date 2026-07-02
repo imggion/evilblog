@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! Small Markdown subset for post bodies.
 //!
 //! The database stores the author-written source. This module is the only place

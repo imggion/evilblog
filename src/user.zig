@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! SQLite-backed users and password hashing.
 const std = @import("std");
 

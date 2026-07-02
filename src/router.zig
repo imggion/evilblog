@@ -1,3 +1,6 @@
+// Copyright (c) 2026 imggion
+// SPDX-License-Identifier: MIT
+
 //! HTTP routing and form handling for the app's small public/admin surface.
 //!
 //! Routes are kept explicit instead of introducing a dispatcher framework; the
