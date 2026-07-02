@@ -31,10 +31,11 @@ Post bodies are stored as a restricted Markdown source in SQLite and rendered by
 `src/markdown.zig`. Do not store raw HTML in posts; the renderer escapes
 user-controlled text and emits only its small whitelist of hardcoded tags.
 
-Optional agent post creation lives in `src/api.zig` behind `POST /api/posts`.
+Optional agent post access lives in `src/api.zig` behind `GET /api/posts`,
+`POST /api/posts`, and `PATCH /api/posts/:id`.
 It is exposed only when `api_gateway_enabled` is true in `evilblog.zon`, requires
-`Authorization: Bearer <api_token>`, accepts JSON post source, and writes through
-`post.Store.save()` without changing storage or rendering paths.
+`Authorization: Bearer <api_token>`, accepts JSON post source and metadata, and
+writes through `post.Store.save()` without changing storage or rendering paths.
 
 There is no Next.js, React, Vue, Node, Bun, client state library, ORM, or CSS
 framework in this repository. Keep future work aligned with the existing direct
@@ -97,7 +98,8 @@ static markup/CSS/JS in `src/templates/` unless the current pattern no longer fi
 Admin draft listing and draft-form hydration should stay in the explicit
 `/admin/drafts` and `/admin/draft/:id` routes.
 The optional agent API should stay in `src/api.zig`, with `src/router.zig` doing
-only the explicit `/api/posts` branch and feature flag check.
+only the explicit `/api/posts` and `/api/posts/:id` branches and feature flag
+check.
 Published post editing should reuse the same admin form through
 `/admin/post/:id/edit`, and post deletion should stay behind authenticated
 author checks in `/admin/post/:id/delete`. Comment deletion should stay admin-only

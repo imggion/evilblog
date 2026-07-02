@@ -48,6 +48,7 @@ pub fn handle(
     const handled = switch (request.head.method) {
         .GET => try handleGet(allocator, io, cfg, viewer, store, request, target_path),
         .POST => try handlePost(allocator, io, cfg, viewer, store, request, target_path),
+        .PATCH => try handlePatch(allocator, cfg, store, request, target_path),
         else => false,
     };
 
@@ -73,6 +74,12 @@ fn handleGet(
 
     if (std.mem.startsWith(u8, target_path, static_url_prefix)) {
         try sendStatic(allocator, io, request, target_path);
+        return true;
+    }
+
+    if (std.mem.eql(u8, target_path, "/api/posts")) {
+        if (!cfg.api_gateway_enabled) return false;
+        try api.handleListPosts(allocator, cfg, store, request);
         return true;
     }
 
@@ -330,6 +337,22 @@ fn handlePost(
             return true;
         }
         return false;
+    }
+
+    return false;
+}
+
+fn handlePatch(
+    allocator: std.mem.Allocator,
+    cfg: Config,
+    store: post.Store,
+    request: *std.http.Server.Request,
+    target_path: []const u8,
+) !bool {
+    if (apiPostId(target_path)) |id| {
+        if (!cfg.api_gateway_enabled) return false;
+        try api.handlePatchPost(allocator, cfg, store, request, id);
+        return true;
     }
 
     return false;
@@ -1023,6 +1046,13 @@ fn adminCommentActionId(path: []const u8, suffix: []const u8) ?[]const u8 {
     return path[prefix.len..id_end];
 }
 
+fn apiPostId(path: []const u8) ?[]const u8 {
+    const prefix = "/api/posts/";
+    if (!std.mem.startsWith(u8, path, prefix)) return null;
+    if (path.len <= prefix.len) return null;
+    return path[prefix.len..];
+}
+
 fn viewerOwnsPostId(store: post.Store, id: []const u8, username: []const u8) !bool {
     if (try store.readByIdFresh(id)) |item| {
         var owned = item;
@@ -1339,11 +1369,13 @@ test "admin route matching stays in the admin namespace" {
     try std.testing.expectEqualStrings("42", adminPostActionId("/admin/post/42/edit", "/edit").?);
     try std.testing.expectEqualStrings("42", adminPostActionId("/admin/post/42/delete", "/delete").?);
     try std.testing.expectEqualStrings("42", adminCommentActionId("/admin/comment/42/delete", "/delete").?);
+    try std.testing.expectEqualStrings("42", apiPostId("/api/posts/42").?);
     try std.testing.expect(adminPostActionId("/admin/post//edit", "/edit") == null);
     try std.testing.expect(adminPostActionId("/admin/post/42", "/edit") == null);
     try std.testing.expect(adminPostActionId("/admin/draft/42/edit", "/edit") == null);
     try std.testing.expect(adminCommentActionId("/admin/comment//delete", "/delete") == null);
     try std.testing.expect(adminCommentActionId("/admin/post/42/delete", "/delete") == null);
+    try std.testing.expect(apiPostId("/api/posts/") == null);
 }
 
 test "admin route helpers require admin role" {

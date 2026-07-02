@@ -187,25 +187,38 @@ Enable the API in `evilblog.zon` and set a token:
 .api_token = "replace-with-a-long-random-token",
 ```
 
-Then agents can create posts with `POST /api/posts` using:
+Then agents can read, create, and update posts using:
 
 ```http
 Authorization: Bearer <api_token>
 ```
 
-Request body:
+Endpoints:
+
+```http
+GET /api/posts
+POST /api/posts
+PATCH /api/posts/<id>
+```
+
+Create request body:
 
 ```json
 {
   "title": "Post title",
   "body": "Post body in Markdown",
+  "excerpt": "Optional meta description",
+  "og_image": "/statics/og-default.png",
+  "tags": "zig,sqlite",
   "status": "draft"
 }
 ```
 
+`PATCH /api/posts/<id>` accepts any subset of `title`, `slug`, `body`, `excerpt`, `og_image`, `tags`, and `status`.
+
 ## Hermes Skill
 
-This repository includes a Hermes skill under `skills/` for delegating blog post creation to an agent.
+This repository includes a Hermes skill under `skills/` for delegating blog post creation and updates to an agent.
 
 To install it, give Hermes this repository and tell it:
 
@@ -213,7 +226,7 @@ To install it, give Hermes this repository and tell it:
 Read the skill in this repository under /skills and install it into yourself.
 ```
 
-After installing the skill, configure Hermes with `EVILBLOG_API_KEY` in its environment. The value must match `api_token` in `evilblog.zon` or the `API_TOKEN` environment variable used by Evilblog.
+After installing the skill, configure Hermes with `EVILBLOG_API_KEY` and `EVILBLOG_API_URL` in its environment. The key must match `api_token` in `evilblog.zon` or the `API_TOKEN` environment variable used by Evilblog.
 
 ## Redis
 

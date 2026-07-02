@@ -183,6 +183,10 @@ pub const Store = struct {
         return try self.listDraftsSqlite();
     }
 
+    pub fn listAll(self: Store) !PostList {
+        return try self.listAllSqlite();
+    }
+
     pub fn deleteByIdForAuthor(self: Store, id: []const u8, author: []const u8) !void {
         const id_number = parseId(id) catch return error.PostNotFound;
         var existing = (try self.readByIdSqliteNumber(id_number)) orelse return error.PostNotFound;
@@ -370,7 +374,7 @@ pub const Store = struct {
         const stmt = try db.prepare(conn,
             \\SELECT id, title, slug, body, excerpt, og_image, created_at, updated_at, author, status, tags,
             \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points
-            \\FROM posts ORDER BY id ASC
+            \\FROM posts ORDER BY updated_at DESC, id DESC
         );
         defer db.finalize(stmt);
 
