@@ -130,6 +130,19 @@ make up
 
 `make up` tags the Docker image with the current Git version.
 
+To run the same stack behind Traefik (HTTP → HTTPS with Let's Encrypt) instead of
+exposing Evilblog directly:
+
+```sh
+TRAEFIK_HOST=blog.example.com LETSENCRYPT_EMAIL=admin@example.com docker compose --env-file .env.prod -f docker-compose.traefik.yml up --build
+```
+
+`docker-compose.traefik.yml` starts Traefik with:
+- HTTP on `TRAEFIK_HTTP_PORT` (default `80`), redirecting to HTTPS.
+- HTTPS on `TRAEFIK_HTTPS_PORT` (default `443`) with a Let's Encrypt certificate
+  for the `TRAEFIK_HOST`. Set `LETSENCRYPT_EMAIL` to receive expiry notices.
+- Evilblog's app port is internal to the Docker network; only Traefik is exposed.
+
 The compose file overrides `REDIS_HOST=redis` so the app reaches Redis on the
 Docker network. Keep `REDIS_USERNAME` and `REDIS_PASSWORD` in `.env.prod`; leave
 both empty for an unauthenticated Redis.

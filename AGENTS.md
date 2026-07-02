@@ -74,6 +74,10 @@ Use the local `rtk` prefix for shell commands.
   lets `build.zig` derive the app version unless `VERSION=v1.2.3` is passed.
 - `rtk docker compose --env-file .env.prod up --build` starts Evilblog and Redis
   together; compose overrides `REDIS_HOST=redis` for the app container.
+- `rtk docker compose --env-file .env.prod -f docker-compose.traefik.yml up --build`
+  starts Evilblog, Redis, and Traefik; set `TRAEFIK_HOST` for the Host rule,
+  `TRAEFIK_HTTP_PORT`/`TRAEFIK_HTTPS_PORT` to override the public ports, and
+  `LETSENCRYPT_EMAIL` for Let's Encrypt certificate notifications.
 - `rtk env SESSION_SECRET=0123456789abcdef0123456789abcdef zig build run` starts
   the server on `http://127.0.0.1:8080`.
 - `rtk make debug`, `rtk make release`, `rtk make build-all`, `rtk make deploy`,

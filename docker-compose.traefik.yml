@@ -1,0 +1,74 @@
+services:
+  evilblog:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-}
+    image: evilblog:${IMAGE_TAG:-local}
+    env_file:
+      - ${EVILBLOG_ENV_FILE:-.env.prod}
+    environment:
+      BLOG_HOST: 0.0.0.0
+      BLOG_PORT: ${BLOG_PORT:-8080}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SQLITE_PATH: /data/evilblog.sqlite3
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.evilblog.rule=Host(`${TRAEFIK_HOST:-localhost}`)
+      - traefik.http.routers.evilblog.entrypoints=websecure
+      - traefik.http.routers.evilblog.tls=true
+      - traefik.http.routers.evilblog.tls.certresolver=letsencrypt
+      - traefik.http.services.evilblog.loadbalancer.server.port=${BLOG_PORT:-8080}
+      - traefik.http.routers.evilblog-http.rule=Host(`${TRAEFIK_HOST:-localhost}`)
+      - traefik.http.routers.evilblog-http.entrypoints=web
+      - traefik.http.middlewares.redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-https.redirectscheme.permanent=true
+      - traefik.http.routers.evilblog-http.middlewares=redirect-https
+    volumes:
+      - evilblog-data:/data
+    depends_on:
+      - redis
+
+  traefik:
+    image: traefik:v3
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL:-}
+      - --certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/certs
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_USERNAME: ${REDIS_USERNAME:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command:
+      - sh
+      - -c
+      - |
+        if [ -n "$$REDIS_PASSWORD" ] && [ -n "$$REDIS_USERNAME" ]; then
+          printf 'user default off\nuser %s on >%s ~* +@all\n' "$$REDIS_USERNAME" "$$REDIS_PASSWORD" > /tmp/users.acl
+          exec redis-server --aclfile /tmp/users.acl --appendonly yes
+        elif [ -n "$$REDIS_PASSWORD" ]; then
+          exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
+        else
+          exec redis-server --appendonly yes
+        fi
+    volumes:
+      - redis-data:/data
+
+volumes:
+  evilblog-data:
+  redis-data:
+  traefik-certs:
