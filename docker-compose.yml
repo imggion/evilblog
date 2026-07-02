@@ -15,6 +15,23 @@ services:
       SQLITE_PATH: /data/evilblog.sqlite3
     ports:
       - "${BLOG_PORT:-8080}:${BLOG_PORT:-8080}"
+    # TRAEFIK — uncomment below to use with a system Traefik on the traefik-public network.
+    # Also consider commenting out `ports:` above so the app is not exposed directly.
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.http.routers.evilblog.rule=Host(`${TRAEFIK_HOST:-localhost}`)
+    #   - traefik.http.routers.evilblog.entrypoints=websecure
+    #   - traefik.http.routers.evilblog.tls=true
+    #   - traefik.http.routers.evilblog.tls.certresolver=letsencrypt
+    #   - traefik.http.services.evilblog.loadbalancer.server.port=${BLOG_PORT:-8080}
+    #   - traefik.http.routers.evilblog-http.rule=Host(`${TRAEFIK_HOST:-localhost}`)
+    #   - traefik.http.routers.evilblog-http.entrypoints=web
+    #   - traefik.http.middlewares.redirect-https.redirectscheme.scheme=https
+    #   - traefik.http.middlewares.redirect-https.redirectscheme.permanent=true
+    #   - traefik.http.routers.evilblog-http.middlewares=redirect-https
+    # networks:
+    #   - default
+    #   - traefik-public
     volumes:
       - evilblog-data:/data
     depends_on:
@@ -39,6 +56,10 @@ services:
         fi
     volumes:
       - redis-data:/data
+
+networks:
+  traefik-public:
+    external: true
 
 volumes:
   evilblog-data:
