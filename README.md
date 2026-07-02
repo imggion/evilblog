@@ -90,6 +90,19 @@ optimization if needed:
 make build-all BUILD_ALL_VERSION=v0.1.0 BUILD_ALL_OPTIMIZE=ReleaseFast
 ```
 
+Build all release binaries and create the GitHub release from `dist/`:
+
+```sh
+make deploy
+```
+
+`make deploy` uses the same `BUILD_ALL_VERSION` value for the tag, release name,
+and asset filenames. Override it when cutting a specific release:
+
+```sh
+make deploy BUILD_ALL_VERSION=v0.1.0
+```
+
 ## Run
 
 Generate a session secret:

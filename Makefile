@@ -1,10 +1,12 @@
-.PHONY: debug release build-all docker-build up test serve run session-secret clean help
+.PHONY: debug release build-all deploy docker-build up test serve run session-secret clean help
 
 BUILD_ALL_OPTIMIZE ?= ReleaseSmall
 BUILD_ALL_VERSION ?= $(shell git describe --tags --match 'v[0-9]*' --dirty 2>/dev/null || printf 'v0.0.0-dev')
 DIST_DIR ?= dist
 ENV_FILE ?= .env.prod
 VERSION ?=
+RELEASE_TITLE ?= evilblog $(BUILD_ALL_VERSION)
+RELEASE_NOTES ?= Release $(BUILD_ALL_VERSION)
 IMAGE_TAG ?= $(shell git describe --tags --match 'v[0-9]*' --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || printf 'local')
 DOCKER_IMAGE_TAG = $(if $(VERSION),$(VERSION),$(IMAGE_TAG))
 
@@ -28,6 +30,13 @@ build-all:
 	zig build -Doptimize=$(BUILD_ALL_OPTIMIZE) -Dtarget=x86-windows-gnu "-Dversion=$(BUILD_ALL_VERSION)" --prefix "$(DIST_DIR)/tmp/windows-x86"
 	cp "$(DIST_DIR)/tmp/windows-x86/bin/evilblog.exe" "$(DIST_DIR)/evilblog-$(BUILD_ALL_VERSION)-windows-x86.exe"
 	rm -rf "$(DIST_DIR)/tmp"
+
+deploy:
+	@test -z "$$(git status --porcelain)" || (echo "Refusing deploy with uncommitted changes."; exit 1)
+	@command -v gh >/dev/null || (echo "gh CLI is required."; exit 1)
+	@gh auth status >/dev/null 2>&1 || (echo "gh auth status failed; run gh auth login."; exit 1)
+	$(MAKE) build-all
+	@cd "$(DIST_DIR)" && set -- evilblog-"$(BUILD_ALL_VERSION)"-*; test -e "$$1" || (echo "No release assets found in $(DIST_DIR)."; exit 1); gh release create "$(BUILD_ALL_VERSION)" "$$@" --title "$(RELEASE_TITLE)" --notes "$(RELEASE_NOTES)" --target "$$(git -C .. rev-parse HEAD)"
 
 docker-build:
 	@test -n "$(VERSION)" || (echo "VERSION is required, example: make docker-build VERSION=1.2.3"; exit 1)
@@ -56,6 +65,7 @@ help:
 	@echo "  make debug    Build in Debug mode"
 	@echo "  make release  Build in ReleaseFast mode"
 	@echo "  make build-all  Build versioned ReleaseSmall binaries for Linux and Windows into dist/"
+	@echo "  make deploy   Build all release binaries and create the GitHub release"
 	@echo "  make docker-build VERSION=1.2.3  Build Docker image evilblog:VERSION"
 	@echo "  make up       Start Docker Compose with Redis"
 	@echo "  make test     Run tests"
