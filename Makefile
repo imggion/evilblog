@@ -35,8 +35,14 @@ deploy:
 	@test -z "$$(git status --porcelain)" || (echo "Refusing deploy with uncommitted changes."; exit 1)
 	@command -v gh >/dev/null || (echo "gh CLI is required."; exit 1)
 	@gh auth status >/dev/null 2>&1 || (echo "gh auth status failed; run gh auth login."; exit 1)
-	$(MAKE) build-all
-	@cd "$(DIST_DIR)" && set -- evilblog-"$(BUILD_ALL_VERSION)"-*; test -e "$$1" || (echo "No release assets found in $(DIST_DIR)."; exit 1); gh release create "$(BUILD_ALL_VERSION)" "$$@" --title "$(RELEASE_TITLE)" --notes "$(RELEASE_NOTES)" --target "$$(git -C .. rev-parse HEAD)"
+	@HEAD_TAG=$$(git tag --points-at HEAD | head -n1); \
+		if [ -n "$$HEAD_TAG" ]; then echo "HEAD already tagged as $$HEAD_TAG; nothing to deploy."; exit 1; fi
+	@DEPLOY_TAG=$$(git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null | sed 's/^v//' | awk -F. '{printf "v%d.%d.%d", $$1, $$2, $$3+1}'); \
+		echo "Tagging $$DEPLOY_TAG at HEAD"; \
+		git tag "$$DEPLOY_TAG" && git push origin "$$DEPLOY_TAG"; \
+		$(MAKE) build-all BUILD_ALL_VERSION="$$DEPLOY_TAG"; \
+		cd "$(DIST_DIR)" && set -- evilblog-"$$DEPLOY_TAG"-*; test -e "$$1" || (echo "No release assets found in $(DIST_DIR)."; exit 1); \
+		gh release create "$$DEPLOY_TAG" "$$@" --title "evilblog $$DEPLOY_TAG" --notes "Release $$DEPLOY_TAG" --target "$$(git rev-parse HEAD)"
 
 docker-build:
 	@test -n "$(VERSION)" || (echo "VERSION is required, example: make docker-build VERSION=1.2.3"; exit 1)
