@@ -803,30 +803,84 @@ fn handleAccountPassword(
     const current_password = form.current_password orelse "";
     const new_password = form.new_password orelse "";
     const confirm_password = form.confirm_password orelse "";
-    if (!std.mem.eql(u8, new_password, confirm_password)) {
+    const new_username_raw = if (form.new_username) |u| std.mem.trim(u8, u, " \t\r\n") else "";
+    const has_password = new_password.len > 0;
+    const wants_rename = new_username_raw.len > 0 and !std.mem.eql(u8, new_username_raw, current.username);
+
+    if (!has_password and !wants_rename) {
+        try sendAccountPassword(allocator, cfg, viewer, request, "Enter a new username or a new password.");
+        return;
+    }
+    if (has_password and !std.mem.eql(u8, new_password, confirm_password)) {
         try sendAccountPassword(allocator, cfg, viewer, request, "New passwords do not match.");
         return;
     }
 
     const user_store: user.Store = .{ .allocator = allocator, .cfg = cfg };
     const now = std.Io.Clock.Timestamp.now(io, .real).raw.toSeconds();
-    user_store.changePassword(current.username, current_password, new_password, now, io) catch |err| switch (err) {
-        error.CurrentPasswordInvalid => {
-            try sendAccountPassword(allocator, cfg, viewer, request, "Current password is invalid.");
-            return;
-        },
-        error.NewPasswordTooShort => {
-            try sendAccountPassword(allocator, cfg, viewer, request, "New password must be at least 12 characters.");
-            return;
-        },
-        error.NewPasswordTooLong => {
-            try sendAccountPassword(allocator, cfg, viewer, request, "New password is too long.");
-            return;
-        },
-        else => |e| return sendServiceProblem(allocator, cfg, request, e),
-    };
 
-    try redirect(request, if (auth.isAdmin(current)) "/admin" else "/");
+    // Rename first: it verifies current_password. A following password
+    // change must run against the new username because the old row no
+    // longer exists.
+    const final_username: []const u8 = if (wants_rename) new_username_raw else current.username;
+    var renamed = false;
+    if (wants_rename) {
+        user_store.changeUsername(current.username, current_password, new_username_raw, now, io) catch |err| switch (err) {
+            error.CurrentPasswordInvalid => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "Current password is invalid.");
+                return;
+            },
+            error.NewUsernameTooShort => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "Username must be at least 1 character.");
+                return;
+            },
+            error.NewUsernameTooLong => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "Username must be at most 64 characters.");
+                return;
+            },
+            error.NewUsernameTaken => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "Username is already taken.");
+                return;
+            },
+            error.UserNotFound => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "Account not found.");
+                return;
+            },
+            else => |e| return sendServiceProblem(allocator, cfg, request, e),
+        };
+        renamed = true;
+    }
+
+    if (has_password) {
+        user_store.changePassword(final_username, current_password, new_password, now, io) catch |err| switch (err) {
+            error.CurrentPasswordInvalid => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "Current password is invalid.");
+                return;
+            },
+            error.NewPasswordTooShort => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "New password must be at least 12 characters.");
+                return;
+            },
+            error.NewPasswordTooLong => {
+                try sendAccountPassword(allocator, cfg, viewer, request, "New password is too long.");
+                return;
+            },
+            else => |e| return sendServiceProblem(allocator, cfg, request, e),
+        };
+    }
+
+    // rename-only while the bootstrap flag is still set keeps the
+    // user on the change page so they can set a password next; a
+    // password change (with or without rename) clears it.
+    const still_must_change = !has_password and current.must_change_password;
+    const location = if (still_must_change) "/account/password" else if (auth.isAdmin(current)) "/admin" else "/";
+    if (renamed) {
+        const cookie = try auth.loginCookie(allocator, cfg, final_username);
+        defer allocator.free(cookie);
+        try redirectWithCookie(request, location, cookie);
+        return;
+    }
+    try redirect(request, location);
 }
 
 fn handleAdminPost(
@@ -1120,11 +1174,13 @@ const PasswordForm = struct {
     current_password: ?[]u8 = null,
     new_password: ?[]u8 = null,
     confirm_password: ?[]u8 = null,
+    new_username: ?[]u8 = null,
 
     fn deinit(self: *PasswordForm, allocator: std.mem.Allocator) void {
         if (self.current_password) |value| allocator.free(value);
         if (self.new_password) |value| allocator.free(value);
         if (self.confirm_password) |value| allocator.free(value);
+        if (self.new_username) |value| allocator.free(value);
     }
 };
 
@@ -1288,6 +1344,10 @@ fn putPasswordField(allocator: std.mem.Allocator, form: *PasswordForm, name: []c
         replaceField(allocator, &form.confirm_password, value);
         return true;
     }
+    if (std.mem.eql(u8, name, "new_username")) {
+        replaceField(allocator, &form.new_username, value);
+        return true;
+    }
     return false;
 }
 
@@ -1354,12 +1414,13 @@ test "comment form parser keeps recognized fields" {
 }
 
 test "password form parser keeps recognized fields" {
-    var form = try parsePasswordForm(std.testing.allocator, "current_password=old&new_password=new+secret&confirm_password=new+secret");
+    var form = try parsePasswordForm(std.testing.allocator, "current_password=old&new_password=new+secret&confirm_password=new+secret&new_username=imggion");
     defer form.deinit(std.testing.allocator);
 
     try std.testing.expectEqualStrings("old", form.current_password.?);
     try std.testing.expectEqualStrings("new secret", form.new_password.?);
     try std.testing.expectEqualStrings("new secret", form.confirm_password.?);
+    try std.testing.expectEqualStrings("imggion", form.new_username.?);
 }
 
 test "admin route matching stays in the admin namespace" {

@@ -238,6 +238,12 @@ pub fn renderPasswordChange(
         \\<div><label>confirm password<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required></label></div>
         \\<div><button type="submit">change password</button></div>
         \\</form>
+        \\<form class="password-form" method="post" action="/account/password">
+        \\<p class="form-hint">Change username only. Current password confirms the action; posts and upvotes are relinked to the new name.</p>
+        \\<div><label>new username<input name="new_username" type="text" autocomplete="username" maxlength="64"></label></div>
+        \\<div><label>current password<input name="current_password" type="password" autocomplete="current-password" required></label></div>
+        \\<div><button type="submit">change username</button></div>
+        \\</form>
         \\
     );
     try endPage(allocator, &out.writer, cfg);
@@ -932,6 +938,7 @@ test "render password change shows forced-change warning" {
     try std.testing.expect(std.mem.indexOf(u8, html, "name=\"current_password\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "name=\"new_password\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "name=\"confirm_password\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, html, "name=\"new_username\"") != null);
     try std.testing.expect(!template.containsPlaceholderToken(html));
 }
 
