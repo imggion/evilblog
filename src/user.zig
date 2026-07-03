@@ -130,6 +130,56 @@ pub const Store = struct {
         try db.stepDone(stmt);
     }
 
+    // Rename a user and cascade the new username to posts.author and
+    // post_upvotes.user so existing posts stay owned by the renamed account
+    // and prior upvotes keep counting as the same voter. current_password
+    // gates the action so a stolen session cookie alone is not enough.
+    pub fn changeUsername(self: Store, current_username: []const u8, current_password: []const u8, new_username: []const u8, now_seconds: i64, io: std.Io) !void {
+        const clean_new = std.mem.trim(u8, new_username, " \t\r\n");
+        if (clean_new.len == 0) return error.NewUsernameTooShort;
+        if (clean_new.len > max_username_len) return error.NewUsernameTooLong;
+
+        var stored = (try self.readStoredUser(current_username)) orelse return error.UserNotFound;
+        defer stored.deinit(self.allocator);
+
+        if (!try verifyPassword(self.allocator, io, stored.password_hash, current_password)) return error.CurrentPasswordInvalid;
+
+        if (try self.readStoredUser(clean_new)) |taken| {
+            var owned_taken = taken;
+            owned_taken.deinit(self.allocator);
+            return error.NewUsernameTaken;
+        }
+
+        const conn = try db.open(self.allocator, self.cfg);
+        defer db.close(conn);
+
+        try db.exec(conn, "BEGIN;");
+        errdefer db.exec(conn, "ROLLBACK;") catch {};
+
+        const user_stmt = try db.prepare(conn,
+            \\UPDATE users SET username = ?, updated_at = ? WHERE username = ?
+        );
+        defer db.finalize(user_stmt);
+        try db.bindText(user_stmt, 1, clean_new);
+        try db.bindInt(user_stmt, 2, now_seconds);
+        try db.bindText(user_stmt, 3, current_username);
+        try db.stepDone(user_stmt);
+
+        const posts_stmt = try db.prepare(conn, "UPDATE posts SET author = ? WHERE author = ?");
+        defer db.finalize(posts_stmt);
+        try db.bindText(posts_stmt, 1, clean_new);
+        try db.bindText(posts_stmt, 2, current_username);
+        try db.stepDone(posts_stmt);
+
+        const upvotes_stmt = try db.prepare(conn, "UPDATE post_upvotes SET user = ? WHERE user = ?");
+        defer db.finalize(upvotes_stmt);
+        try db.bindText(upvotes_stmt, 1, clean_new);
+        try db.bindText(upvotes_stmt, 2, current_username);
+        try db.stepDone(upvotes_stmt);
+
+        try db.exec(conn, "COMMIT;");
+    }
+
     fn count(self: Store) !usize {
         const conn = try db.open(self.allocator, self.cfg);
         defer db.close(conn);
@@ -299,4 +349,64 @@ test "password change verifies current password and clears bootstrap flag" {
     var login = (try store.authenticate("admin", "new-password-123", 103, std.testing.io)).?;
     defer login.deinit(std.testing.allocator);
     try std.testing.expect(!login.must_change_password);
+}
+
+test "change username cascades to posts and upvotes and rejects taken names" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const db_path = try std.fmt.allocPrint(std.testing.allocator, ".zig-cache/tmp/{s}/evilblog.sqlite3", .{&tmp.sub_path});
+    defer std.testing.allocator.free(db_path);
+
+    const cfg = testConfig(db_path);
+    try db.migrate(std.testing.allocator, cfg);
+
+    const store: Store = .{ .allocator = std.testing.allocator, .cfg = cfg };
+    const password = (try store.bootstrapDefaultAdminIfEmpty(std.testing.io, 100)).?;
+    defer std.testing.allocator.free(password);
+
+    // ponytail: raw seed for cascade assertions, no higher-level post API in user tests.
+    {
+        const conn = try db.open(std.testing.allocator, cfg);
+        defer db.close(conn);
+        try db.exec(conn,
+            \\INSERT INTO posts (title, slug, body, excerpt, og_image, created_at, updated_at, author, status, tags)
+            \\VALUES ('P', 'p', '', '', '', 1, 1, 'admin', 'published', '');
+        );
+        try db.exec(conn,
+            \\INSERT INTO post_upvotes (post_id, user, created_at) VALUES (1, 'admin', 1);
+        );
+    }
+
+    try std.testing.expectError(error.CurrentPasswordInvalid, store.changeUsername("admin", "wrong", "imggion", 110, std.testing.io));
+    try std.testing.expectError(error.NewUsernameTooShort, store.changeUsername("admin", password, "   ", 110, std.testing.io));
+
+    try store.changeUsername("admin", password, "imggion", 120, std.testing.io);
+
+    try std.testing.expect((try store.authenticate("admin", password, 121, std.testing.io)) == null);
+    var login = (try store.authenticate("imggion", password, 122, std.testing.io)).?;
+    defer login.deinit(std.testing.allocator);
+    try std.testing.expectEqualStrings("imggion", login.username);
+
+    try std.testing.expectError(error.NewUsernameTaken, store.changeUsername("imggion", password, "imggion", 130, std.testing.io));
+
+    {
+        const conn = try db.open(std.testing.allocator, cfg);
+        defer db.close(conn);
+
+        const post_stmt = try db.prepare(conn, "SELECT author FROM posts WHERE slug = ?");
+        defer db.finalize(post_stmt);
+        try db.bindText(post_stmt, 1, "p");
+        try std.testing.expectEqual(db.StepResult.row, try db.step(post_stmt));
+        const author = try db.textColumnAlloc(std.testing.allocator, post_stmt, 0);
+        defer std.testing.allocator.free(author);
+        try std.testing.expectEqualStrings("imggion", author);
+
+        const up_stmt = try db.prepare(conn, "SELECT user FROM post_upvotes WHERE post_id = 1");
+        defer db.finalize(up_stmt);
+        try std.testing.expectEqual(db.StepResult.row, try db.step(up_stmt));
+        const voter = try db.textColumnAlloc(std.testing.allocator, up_stmt, 0);
+        defer std.testing.allocator.free(voter);
+        try std.testing.expectEqualStrings("imggion", voter);
+    }
 }
