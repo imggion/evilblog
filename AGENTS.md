@@ -111,6 +111,13 @@ Published post editing should reuse the same admin form through
 `/admin/post/:id/edit`, and post deletion should stay behind authenticated
 author checks in `/admin/post/:id/delete`. Comment deletion should stay admin-only
 through `/admin/comment/:id/delete`.
+User rename lives in `user.Store.changeUsername` and is exposed through the
+`/account/password` route alongside the password form; it must cascade the new
+username to `posts.author` and `post_upvotes.user` in a single SQLite
+transaction so existing posts stay owned by the renamed account and prior
+upvotes keep counting as the same voter. The session cookie is reissued under
+the new username on a successful rename because the signed token embeds the
+username.
 Build-time app versioning is generated in `build.zig` from `-Dversion`, Git
 tags, or commit metadata, then exposed through `build_options.version`.
 Keep app logs structured through `src/logger.zig`; do not log request bodies,
