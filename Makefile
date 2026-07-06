@@ -50,7 +50,7 @@ docker-build:
 
 up:
 	@test -f "$(ENV_FILE)" || (echo "$(ENV_FILE) missing, copy .env.prod.example"; exit 1)
-	EVILBLOG_ENV_FILE="$(ENV_FILE)" IMAGE_TAG="$(DOCKER_IMAGE_TAG)" VERSION="$(VERSION)" docker compose --env-file "$(ENV_FILE)" up --build
+	EVILBLOG_ENV_FILE="$(ENV_FILE)" IMAGE_TAG="$(DOCKER_IMAGE_TAG)" VERSION="$(VERSION)" docker compose --env-file "$(ENV_FILE)" up --build -d
 
 test:
 	zig build test
