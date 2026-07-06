@@ -922,7 +922,7 @@ fn handleAdminPost(
 
     if (trimmedFormId(form.id)) |id| {
         if (!(try viewerOwnsPostId(store, id, viewer.username))) {
-            try sendMessage(allocator, cfg, viewer, request, .not_found, "not found", "Post not found.");
+            try sendMessage(allocator, cfg, viewer, request, .forbidden, "forbidden", "Not authorized to edit this post.");
             return;
         }
     }
@@ -1130,7 +1130,8 @@ fn viewerOwnsPostId(store: post.Store, id: []const u8, username: []const u8) !bo
 }
 
 fn viewerOwnsPost(username: []const u8, item: post.Post) bool {
-    return item.author.len > 0 and std.mem.eql(u8, username, item.author);
+    if (item.author.len == 0) return true;
+    return std.mem.eql(u8, username, item.author);
 }
 
 fn computeVisitorKey(allocator: std.mem.Allocator, request: *std.http.Server.Request) ![]u8 {
