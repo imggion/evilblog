@@ -500,6 +500,19 @@ fn sendSinglePost(
         defer comments.deinit(allocator);
         const draft_count = draftCountForViewer(store, viewer) catch |err| return sendServiceProblem(allocator, cfg, request, err);
         const now = std.Io.Clock.Timestamp.now(store.io, .real).raw.toSeconds();
+
+        // ponytail: hash(ip+ua) for dedup, no cookies needed. In-memory
+        // increment avoids a second DB read right after recording the visit.
+        const visitor_key = try computeVisitorKey(allocator, request);
+        defer allocator.free(visitor_key);
+        const post_id = try std.fmt.parseInt(i64, mutable_item.id, 10);
+        const is_new = store.recordVisit(post_id, visitor_key, now) catch false;
+        if (is_new) {
+            const current_visits = std.fmt.parseInt(u64, mutable_item.visits, 10) catch 0;
+            allocator.free(mutable_item.visits);
+            mutable_item.visits = try std.fmt.allocPrint(allocator, "{d}", .{current_visits + 1});
+        }
+
         const body = try html.renderSingle(allocator, cfg, viewer, mutable_item, comments.items, now, draft_count);
         defer allocator.free(body);
         try respondHtml(request, .ok, body);
@@ -1118,6 +1131,22 @@ fn viewerOwnsPostId(store: post.Store, id: []const u8, username: []const u8) !bo
 
 fn viewerOwnsPost(username: []const u8, item: post.Post) bool {
     return item.author.len > 0 and std.mem.eql(u8, username, item.author);
+}
+
+fn computeVisitorKey(allocator: std.mem.Allocator, request: *std.http.Server.Request) ![]u8 {
+    var user_agent: []const u8 = "";
+    var iter = request.iterateHeaders();
+    while (iter.next()) |header| {
+        if (std.ascii.eqlIgnoreCase(header.name, "user-agent")) {
+            user_agent = header.value;
+            break;
+        }
+    }
+
+    var hasher = std.hash.Wyhash.init(0);
+    hasher.update(user_agent);
+    const hash = hasher.final();
+    return try std.fmt.allocPrint(allocator, "{x}", .{hash});
 }
 
 fn trimmedFormId(id: ?[]const u8) ?[]const u8 {

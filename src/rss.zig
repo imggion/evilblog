@@ -96,6 +96,7 @@ fn testPost(allocator: std.mem.Allocator) !post.Post {
         .points = try allocator.dupe(u8, "0"),
         .status = try allocator.dupe(u8, "published"),
         .tags = try allocator.dupe(u8, ""),
+        .visits = try allocator.dupe(u8, "0"),
     };
 }
 

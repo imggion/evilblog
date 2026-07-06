@@ -546,6 +546,7 @@ fn renderPostList(
             .{ .name = "slug", .value = item.slug },
             .{ .name = "title", .value = item.title },
             .{ .name = "points", .value = item.points },
+            .{ .name = "visits", .value = item.visits },
             .{ .name = "author", .value = authorOrFallback(item.author) },
             .{ .name = "relative_time", .value = relative_time },
         });
@@ -574,6 +575,7 @@ fn renderPostFull(allocator: std.mem.Allocator, writer: *Writer, viewer: ?auth.V
         .{ .name = "title", .value = item.title },
         .{ .name = "author_actions", .value = author_actions },
         .{ .name = "points", .value = item.points },
+        .{ .name = "visits", .value = item.visits },
         .{ .name = "author", .value = authorOrFallback(item.author) },
         .{ .name = "relative_time", .value = relative_time },
         .{ .name = "status", .value = item.status },
@@ -886,6 +888,7 @@ fn testPost(allocator: std.mem.Allocator) !post.Post {
         .points = try allocator.dupe(u8, "3"),
         .status = try allocator.dupe(u8, "published"),
         .tags = try allocator.dupe(u8, "zig & redis"),
+        .visits = try allocator.dupe(u8, "5"),
     };
 }
 
@@ -1003,7 +1006,7 @@ test "render single escapes dynamic post content" {
     try std.testing.expect(std.mem.indexOf(u8, html, "<p>line &lt;one&gt;<br>\nline &amp; two</p>") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "<strong>bold</strong> <a href=\"/post/a\" rel=\"noopener noreferrer\">link</a>") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "zig &amp; redis") != null);
-    try std.testing.expect(std.mem.indexOf(u8, html, "3 points by admin 1 hours ago") != null);
+    try std.testing.expect(std.mem.indexOf(u8, html, "3 points &middot; 5 visits by admin 1 hours ago") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "class=\"post-author-actions\"") == null);
     try std.testing.expect(std.mem.indexOf(u8, html, "/admin/post/1/edit") == null);
     try std.testing.expect(std.mem.indexOf(u8, html, "class=\"post-delete-dialog\"") == null);
@@ -1111,7 +1114,7 @@ test "render home includes upvote action and relative post metadata" {
 
     try std.testing.expect(std.mem.indexOf(u8, html, "action=\"/post/title-news/upvote\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "class=\"upvote-icon\"") != null);
-    try std.testing.expect(std.mem.indexOf(u8, html, "3 points by admin 2 minutes ago") != null);
+    try std.testing.expect(std.mem.indexOf(u8, html, "3 points &middot; 5 visits by admin 2 minutes ago") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "(title-news)") == null);
 }
 

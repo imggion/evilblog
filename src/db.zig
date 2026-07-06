@@ -69,20 +69,32 @@ pub fn migrate(allocator: std.mem.Allocator, cfg: Config) !void {
                 \\  password_changed_at INTEGER
                 \\);
                 \\CREATE INDEX users_role_idx ON users(role);
-                \\PRAGMA user_version = 4;
+                \\CREATE TABLE post_visits (
+                \\  post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                \\  visitor_key TEXT NOT NULL,
+                \\  created_at INTEGER NOT NULL,
+                \\  PRIMARY KEY (post_id, visitor_key)
+                \\);
+                \\PRAGMA user_version = 5;
             );
         },
         1 => {
             try migrateToV2(conn);
             try migrateToV3(conn);
             try migrateToV4(conn);
+            try migrateToV5(conn);
         },
         2 => {
             try migrateToV3(conn);
             try migrateToV4(conn);
+            try migrateToV5(conn);
         },
-        3 => try migrateToV4(conn),
-        4 => {},
+        3 => {
+            try migrateToV4(conn);
+            try migrateToV5(conn);
+        },
+        4 => try migrateToV5(conn),
+        5 => {},
         else => return error.UnsupportedSchema,
     }
 }
@@ -232,6 +244,20 @@ fn migrateToV4(conn: Connection) !void {
     );
 }
 
+fn migrateToV5(conn: Connection) !void {
+    try exec(conn,
+        \\BEGIN;
+        \\CREATE TABLE post_visits (
+        \\  post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        \\  visitor_key TEXT NOT NULL,
+        \\  created_at INTEGER NOT NULL,
+        \\  PRIMARY KEY (post_id, visitor_key)
+        \\);
+        \\PRAGMA user_version = 5;
+        \\COMMIT;
+    );
+}
+
 fn userVersion(conn: Connection) !i64 {
     const stmt = try prepare(conn, "PRAGMA user_version");
     defer finalize(stmt);
@@ -323,7 +349,7 @@ test "migration v1 to latest creates upvotes comments and backfills author" {
     try std.testing.expectEqual(StepResult.row, try step(version_stmt));
     const version = try intColumnTextAlloc(std.testing.allocator, version_stmt, 0);
     defer std.testing.allocator.free(version);
-    try std.testing.expectEqualStrings("4", version);
+    try std.testing.expectEqualStrings("5", version);
 
     const stmt = try prepare(conn,
         \\SELECT author, (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id)

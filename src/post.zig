@@ -23,6 +23,7 @@ pub const Post = struct {
     points: []u8,
     status: []u8,
     tags: []u8,
+    visits: []u8,
 
     pub fn deinit(self: *Post, allocator: std.mem.Allocator) void {
         allocator.free(self.id);
@@ -37,6 +38,7 @@ pub const Post = struct {
         allocator.free(self.points);
         allocator.free(self.status);
         allocator.free(self.tags);
+        allocator.free(self.visits);
     }
 };
 
@@ -148,6 +150,27 @@ pub const Store = struct {
             defer mutable_updated.deinit(self.allocator);
             self.cachePostBestEffort(mutable_updated);
         }
+    }
+
+    pub fn recordVisit(self: Store, post_id: i64, visitor_key: []const u8, now_seconds: i64) !bool {
+        const conn = try db.open(self.allocator, self.cfg);
+        defer db.close(conn);
+
+        const stmt = try db.prepare(conn,
+            \\INSERT INTO post_visits (post_id, visitor_key, created_at)
+            \\VALUES (?, ?, ?)
+        );
+        defer db.finalize(stmt);
+
+        try db.bindInt(stmt, 1, post_id);
+        try db.bindText(stmt, 2, visitor_key);
+        try db.bindInt(stmt, 3, now_seconds);
+
+        db.stepWrite(stmt) catch |err| switch (err) {
+            error.SqliteConstraint => return false,
+            else => return err,
+        };
+        return true;
     }
 
     pub fn readBySlug(self: Store, slug: []const u8) !?Post {
@@ -289,7 +312,8 @@ pub const Store = struct {
 
         const stmt = try db.prepare(conn,
             \\SELECT id, title, slug, body, excerpt, og_image, created_at, updated_at, author, status, tags,
-            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points
+            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points,
+            \\  (SELECT COUNT(*) FROM post_visits WHERE post_id = posts.id) AS visits
             \\FROM posts WHERE slug = ? LIMIT 1
         );
         defer db.finalize(stmt);
@@ -309,7 +333,8 @@ pub const Store = struct {
 
         const stmt = try db.prepare(conn,
             \\SELECT id, title, slug, body, excerpt, og_image, created_at, updated_at, author, status, tags,
-            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points
+            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points,
+            \\  (SELECT COUNT(*) FROM post_visits WHERE post_id = posts.id) AS visits
             \\FROM posts WHERE id = ? LIMIT 1
         );
         defer db.finalize(stmt);
@@ -328,7 +353,8 @@ pub const Store = struct {
 
         const stmt = try db.prepare(conn,
             \\SELECT id, title, slug, body, excerpt, og_image, created_at, updated_at, author, status, tags,
-            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points
+            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points,
+            \\  (SELECT COUNT(*) FROM post_visits WHERE post_id = posts.id) AS visits
             \\FROM posts WHERE status = 'published'
             \\ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?
         );
@@ -358,7 +384,8 @@ pub const Store = struct {
 
         const stmt = try db.prepare(conn,
             \\SELECT id, title, slug, body, excerpt, og_image, created_at, updated_at, author, status, tags,
-            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points
+            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points,
+            \\  (SELECT COUNT(*) FROM post_visits WHERE post_id = posts.id) AS visits
             \\FROM posts WHERE status = 'draft'
             \\ORDER BY updated_at DESC, id DESC
         );
@@ -373,7 +400,8 @@ pub const Store = struct {
 
         const stmt = try db.prepare(conn,
             \\SELECT id, title, slug, body, excerpt, og_image, created_at, updated_at, author, status, tags,
-            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points
+            \\  (SELECT COUNT(*) FROM post_upvotes WHERE post_id = posts.id) AS points,
+            \\  (SELECT COUNT(*) FROM post_visits WHERE post_id = posts.id) AS visits
             \\FROM posts ORDER BY updated_at DESC, id DESC
         );
         defer db.finalize(stmt);
@@ -402,11 +430,11 @@ pub const Store = struct {
             "og_image",   "created_at",
             "updated_at", "author",
             "status",     "tags",
-            "points",
+            "points",     "visits",
         });
         defer redis.freeArray(self.allocator, values);
 
-        if (values.len != 11) return error.UnexpectedRedisResponse;
+        if (values.len != 12) return error.UnexpectedRedisResponse;
         if (values[0] == null or values[1] == null) return null;
 
         return .{
@@ -422,6 +450,7 @@ pub const Store = struct {
             .status = try takeOrDefault(self.allocator, values, 8, "draft"),
             .tags = try takeOrDefault(self.allocator, values, 9, ""),
             .points = try takeOrDefault(self.allocator, values, 10, "0"),
+            .visits = try takeOrDefault(self.allocator, values, 11, "0"),
         };
     }
 
@@ -499,6 +528,7 @@ pub const Store = struct {
             "status",     item.status,
             "tags",       item.tags,
             "points",     item.points,
+            "visits",     item.visits,
         });
 
         const slug_key = try std.fmt.allocPrint(self.allocator, "post_by_slug:{s}", .{item.slug});
@@ -575,6 +605,7 @@ fn postFromRow(allocator: std.mem.Allocator, stmt: db.Statement) !Post {
         .status = try db.textColumnAlloc(allocator, stmt, 9),
         .tags = try db.textColumnAlloc(allocator, stmt, 10),
         .points = try db.intColumnTextAlloc(allocator, stmt, 11),
+        .visits = try db.intColumnTextAlloc(allocator, stmt, 12),
     };
 }
 
